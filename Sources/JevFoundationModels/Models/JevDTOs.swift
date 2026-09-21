@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - Jev Request Payloads
 
-public struct JevRequest: Codable, Sendable {
+public struct JevRequest: Codable, Sendable, Equatable {
     public let state: String
     public let model: String
     public let questions: [String: JevQuestion]
@@ -14,7 +14,7 @@ public struct JevRequest: Codable, Sendable {
     }
 }
 
-public enum JevQuestion: Codable, Sendable {
+public enum JevQuestion: Codable, Sendable, Equatable {
     case noul(instructions: String)
     case choice(instructions: String, criteria: [String: String])
     case score(instructions: String, criteria: [String])
@@ -61,7 +61,7 @@ public enum JevQuestion: Codable, Sendable {
 
 // MARK: - Jev Response Payloads
 
-public struct JevResponse: Codable, Sendable {
+public struct JevResponse: Codable, Sendable, Equatable {
     public let model: String
     public let answers: [String: JevAnswer]
     public let usage: JevUsage?
@@ -73,7 +73,7 @@ public struct JevResponse: Codable, Sendable {
     }
 }
 
-public struct JevUsage: Codable, Sendable {
+public struct JevUsage: Codable, Sendable, Equatable {
     public let inputTokens: Int
     public let outputTokens: Int
 
@@ -88,7 +88,7 @@ public struct JevUsage: Codable, Sendable {
     }
 }
 
-public struct JevAnswer: Codable, Sendable {
+public struct JevAnswer: Codable, Sendable, Equatable {
     public let type: String
     public let noul: Double?
     public let choice: String?

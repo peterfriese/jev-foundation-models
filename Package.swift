@@ -14,8 +14,8 @@ let package = Package(
             targets: ["JevFoundationModels"]
         ),
         .executable(
-            name: "jev-cli",
-            targets: ["JevCLI"]
+            name: "ticket-triage-demo",
+            targets: ["TicketTriageDemo"]
         )
     ],
     targets: [
@@ -26,8 +26,9 @@ let package = Package(
             ]
         ),
         .executableTarget(
-            name: "JevCLI",
-            dependencies: ["JevFoundationModels"]
+            name: "TicketTriageDemo",
+            dependencies: ["JevFoundationModels"],
+            path: "Examples/TicketTriageDemo"
         ),
         .testTarget(
             name: "JevFoundationModelsTests",

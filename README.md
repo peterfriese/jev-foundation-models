@@ -138,6 +138,20 @@ swift test
 
 ---
 
+## 📱 Sample Application
+
+Try the sample CLI app located in `Examples/TicketTriageDemo`:
+
+```bash
+# Run with default sample ticket
+swift run ticket-triage-demo
+
+# Or evaluate custom text
+swift run ticket-triage-demo "Our server deployment failed with error 500."
+```
+
+---
+
 ## 📄 License
 
 This project is licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for details.
