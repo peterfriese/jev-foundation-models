@@ -21,7 +21,7 @@ This guide walks you through integrating Jev into your Apple platform applicatio
 ### In `Package.swift`
 ```swift
 dependencies: [
-    .package(url: "https://github.com/peterfriese/jev-foundation-models.git", from: "1.0.0")
+    .package(url: "https://github.com/peterfriese/jev-foundation-models.git", from: "0.1.0")
 ]
 ```
 

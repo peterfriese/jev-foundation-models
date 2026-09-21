@@ -4,6 +4,8 @@
 [![Xcode 27](https://img.shields.io/badge/Xcode-27.0+-blue.svg?style=flat&logo=xcode)](https://developer.apple.com/xcode/)
 [![iOS 27.0+](https://img.shields.io/badge/iOS-27.0+-black.svg?style=flat&logo=apple)](https://developer.apple.com/ios/)
 [![macOS 27.0+](https://img.shields.io/badge/macOS-27.0+-black.svg?style=flat&logo=apple)](https://developer.apple.com/macos/)
+[![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fpeterfriese%2Fjev-foundation-models%2Fbadge%3Ftype%3Dswift-versions)](https://swiftpackageindex.com/peterfriese/jev-foundation-models)
+[![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fpeterfriese%2Fjev-foundation-models%2Fbadge%3Ftype%3Dplatforms)](https://swiftpackageindex.com/peterfriese/jev-foundation-models)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 A lightweight, native Swift 6 bridge integrating **TypeSafe AI's Jev** System One decision model into Apple's **Foundation Models** framework.
@@ -44,7 +46,7 @@ Add `jev-foundation-models` to your `Package.swift` or via Xcode (**File > Add P
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/peterfriese/jev-foundation-models.git", from: "1.0.0")
+    .package(url: "https://github.com/peterfriese/jev-foundation-models.git", from: "0.1.0")
 ]
 ```
 
