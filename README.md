@@ -1,0 +1,143 @@
+# Jev for Apple Foundation Models 🧠⚡️
+
+[![Swift 6](https://img.shields.io/badge/Swift-6.0-orange.svg?style=flat&logo=swift)](https://developer.apple.com/swift/)
+[![Xcode 27](https://img.shields.io/badge/Xcode-27.0+-blue.svg?style=flat&logo=xcode)](https://developer.apple.com/xcode/)
+[![iOS 27.0+](https://img.shields.io/badge/iOS-27.0+-black.svg?style=flat&logo=apple)](https://developer.apple.com/ios/)
+[![macOS 27.0+](https://img.shields.io/badge/macOS-27.0+-black.svg?style=flat&logo=apple)](https://developer.apple.com/macos/)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
+A lightweight, native Swift 6 bridge integrating **TypeSafe AI's Jev** System One decision model into Apple's **Foundation Models** framework.
+
+Evaluate strongly typed `@Generable` structs and enums against application state in **40–150ms** with zero hallucinations, calibrated probabilities, and full Apple Intelligence API compatibility.
+
+---
+
+## 💡 Why Decision Models in Apple Foundation Models?
+
+Traditional Large Language Models (LLMs) are generative text engines: coercing them into producing deterministic structured decisions requires constrained token sampling or prompt-and-parse pipelines.
+
+**Jev** (by [TypeSafe AI](https://typesafe.ai)) is a **System One decision model**. Rather than generating prose word-by-word, Jev evaluates typed questions directly against state in a single feed-forward pass:
+
+| Apple Foundation Models (`@Generable`) | Jev System One Primitive | Behavior |
+| :--- | :--- | :--- |
+| `Bool` | **`noul`** | Binary judgment with calibrated probability of truth |
+| `enum` / String | **`choice`** | Categorical selection across discrete options |
+| `@Guide(description: "...")` | **`instructions`** | Semantic criteria evaluated against state |
+| `@Guide(.range(...))` | **`score`** | Bounded ordinal rubric scoring |
+| `Response.metadata` | **`confidence` & `probabilities`** | Direct access to model uncertainty |
+
+---
+
+## 🚀 Quick Start
+
+### 1. Add Package Dependency
+
+Add `jev-foundation-models` to your `Package.swift` or via Xcode (**File > Add Package Dependencies...**):
+
+```swift
+dependencies: [
+    .package(url: "https://github.com/peterfriese/jev-foundation-models.git", from: "1.0.0")
+]
+```
+
+### 2. Define Your Decision Type
+
+```swift
+import FoundationModels
+
+@Generable
+struct CustomerTriage {
+    @Guide(description: "Is this inquiry urgent or time-sensitive?")
+    var isUrgent: Bool
+
+    @Guide(description: "Which team should handle this request?")
+    var department: Department
+
+    @Guide(description: "Customer frustration score", .range(0...2))
+    var frustration: Int
+}
+
+@Generable
+enum Department {
+    case billing
+    case technical
+    case account
+}
+```
+
+### 3. Evaluate with `LanguageModelSession`
+
+```swift
+import FoundationModels
+import JevFoundationModels
+
+// 1. Create the model
+let jev = JevLanguageModel(apiKey: ProcessInfo.processInfo.environment["TYPESAFE_API_KEY"]!)
+
+// 2. Initialize native Apple FoundationModels session
+let session = LanguageModelSession(model: jev)
+
+// 3. Evaluate state
+let ticket = "My account was double charged this morning! Please fix this ASAP."
+let response = try await session.respond(to: ticket, generating: CustomerTriage.self)
+
+// 4. Access typed results
+let triage = response.content
+print("Urgent: \(triage.isUrgent)")             // true
+print("Route: \(triage.department)")           // .billing
+print("Frustration: \(triage.frustration)")    // 2
+
+// 5. Access calibrated probabilities & confidence from metadata
+if let probabilities = response.metadata["probabilities"] {
+    print("Probabilities: \(probabilities)")
+}
+```
+
+---
+
+## 🏗️ Architecture
+
+`jev-foundation-models` conforms directly to Apple's public provider protocols:
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                        LanguageModelSession                            │
+│  session.respond(to: "...", generating: CustomerTriage.self)           │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │ passes Request (Transcript + Schema)
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                             JevExecutor                                │
+│  • SchemaTranslator: maps @Generable schema to Jev questions (noul/choice)
+│  • JevClient: POST https://api.typesafe.ai/v1/systemone (40-150ms)     │
+│  • ResponseSynthesizer: converts Jev answers into canonical JSON       │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │ yields via Channel
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│              LanguageModelExecutorGenerationChannel                    │
+│  • .text(synthesizedJSON) -> decoded directly into CustomerTriage      │
+│  • .updateMetadata(probabilities, confidence)                          │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+For more in-depth documentation, see:
+* [Architecture Guide](docs/architecture.md)
+* [Type Mapping Guide](docs/mapping-guide.md)
+* [Tech Notes](tech-notes/README.md)
+
+---
+
+## 🧪 Testing
+
+This package includes a full offline mock transport for deterministic testing without hitting live APIs:
+
+```bash
+swift test
+```
+
+---
+
+## 📄 License
+
+This project is licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for details.

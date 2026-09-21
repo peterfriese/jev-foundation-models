@@ -1,0 +1,42 @@
+# Xcode & Swift Package Manager
+.build/
+.swiftpm/
+Packages/
+Package.pins
+Package.resolved
+DerivedData/
+
+# Xcode Project & Workspace
+*.xcodeproj/*
+!*.xcodeproj/project.pbxproj
+!*.xcodeproj/xcshareddata/
+!*.xcodeproj/project.xcworkspace/
+*.xcodeproj/project.xcworkspace/*
+!*.xcodeproj/project.xcworkspace/contents.xcworkspacedata
+*.xcodeproj/project.xcworkspace/xcshareddata/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcuserdatad
+
+# Swift & macOS system
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon\r
+._*
+.Spotlight-V100
+.Trashes
+
+# Environment variables & secrets
+.env
+.env.*
+*.key
+*.pem
+*credentials*.json
+
+# OpenCode / Editors
+.opencode/
+.vscode/
+.idea/
+*.swp
+*~

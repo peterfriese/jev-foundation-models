@@ -1,0 +1,84 @@
+# Getting Started with Jev Foundation Models
+
+This guide walks you through integrating Jev into your Apple platform application using the native Foundation Models framework.
+
+---
+
+## 1. Requirements
+
+- Xcode 27+ / Swift 6.0+
+- Deployment Targets: iOS 27.0+, macOS 27.0+, visionOS 27.0+
+- A TypeSafe AI API Key ([console.typesafe.ai](https://console.typesafe.ai/keys))
+
+---
+
+## 2. Add Package Dependency
+
+### In `Package.swift`
+```swift
+dependencies: [
+    .package(url: "https://github.com/peterfriese/jev-foundation-models.git", from: "1.0.0")
+]
+```
+
+### In Xcode
+Go to **File > Add Package Dependencies...** and enter the repository URL.
+
+---
+
+## 3. Define Your Decision Schema
+
+Use standard Foundation Models `@Generable` and `@Guide` annotations:
+
+```swift
+import FoundationModels
+
+@Generable
+struct TicketTriage {
+    @Guide(description: "Is this ticket urgent or time-sensitive?")
+    var isUrgent: Bool
+
+    @Guide(description: "Which department should handle this request?")
+    var department: Department
+
+    @Guide(description: "Customer frustration level", .range(0...2))
+    var frustration: Int
+}
+
+@Generable
+enum Department {
+    case billing
+    case technical
+    case sales
+}
+```
+
+---
+
+## 4. Evaluate with LanguageModelSession
+
+```swift
+import FoundationModels
+import JevFoundationModels
+
+// 1. Initialize the Jev model
+let jev = JevLanguageModel(apiKey: ProcessInfo.processInfo.environment["TYPESAFE_API_KEY"]!)
+
+// 2. Create standard Apple FoundationModels session
+let session = LanguageModelSession(model: jev)
+
+// 3. Prompt the session
+let ticket = "I was charged twice for my subscription this morning and need this fixed immediately!"
+let response = try await session.respond(to: ticket, generating: TicketTriage.self)
+
+// 4. Consume typed decision
+let triage = response.content
+print("Urgent: \(triage.isUrgent)")             // true
+print("Department: \(triage.department)")       // .billing
+print("Frustration Score: \(triage.frustration)") // 2
+
+// 5. Inspect calibrated probabilities and confidence
+if let confidence = response.metadata["confidence"] {
+    print("Confidence: \(confidence)")
+}
+```
