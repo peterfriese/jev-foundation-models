@@ -146,9 +146,22 @@ swift test
 
 ---
 
-## 📱 Sample Application
+## 📱 Sample Applications
 
-Try the sample CLI app located in `Examples/TicketTriageDemo`:
+### 1. Duplicate Article Detection (`duplicate-article-demo`)
+
+Demonstrates a two-layer deduplication system for read-it-later and knowledge-management apps:
+- **Layer 1 (Deterministic)**: Catches identical URLs and matching title/byline pairs instantly at 0ms and zero token cost.
+- **Layer 2 (Jev System One via Foundation Models)**: Catches rewritten wire stories and syndicated news (different URL, different headline, different byline) using calibrated probabilities and an escape hatch ("Save anyway").
+
+```bash
+# Run the 3-scenario deduplication walkthrough
+swift run duplicate-article-demo
+```
+
+### 2. Ticket Triage (`ticket-triage-demo`)
+
+Demonstrates multi-field `@Generable` evaluation with `Bool`, `enum`, and `@Guide(.range(...))` score:
 
 ```bash
 # Run with default sample ticket

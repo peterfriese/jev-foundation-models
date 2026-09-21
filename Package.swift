@@ -16,6 +16,10 @@ let package = Package(
         .executable(
             name: "ticket-triage-demo",
             targets: ["TicketTriageDemo"]
+        ),
+        .executable(
+            name: "duplicate-article-demo",
+            targets: ["DuplicateArticleDemo"]
         )
     ],
     targets: [
@@ -29,6 +33,11 @@ let package = Package(
             name: "TicketTriageDemo",
             dependencies: ["JevFoundationModels"],
             path: "Examples/TicketTriageDemo"
+        ),
+        .executableTarget(
+            name: "DuplicateArticleDemo",
+            dependencies: ["JevFoundationModels"],
+            path: "Examples/DuplicateArticleDemo"
         ),
         .testTarget(
             name: "JevFoundationModelsTests",
