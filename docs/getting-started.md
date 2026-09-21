@@ -10,6 +10,10 @@ This guide walks you through integrating Jev into your Apple platform applicatio
 - Deployment Targets: iOS 27.0+, macOS 27.0+, visionOS 27.0+
 - A TypeSafe AI API Key ([console.typesafe.ai](https://console.typesafe.ai/keys))
 
+> [!WARNING]
+> **API Key Security in Mobile Apps**
+> Never embed or hardcode your `TYPESAFE_API_KEY` into mobile application bundles (iOS, iPadOS, visionOS). Client application bundles can be easily inspected or decompiled. For mobile clients, forward requests through a secure server proxy that injects the key, or use this package in backend services, macOS tools, and server-side Swift.
+
 ---
 
 ## 2. Add Package Dependency

@@ -10,6 +10,14 @@ A lightweight, native Swift 6 bridge integrating **TypeSafe AI's Jev** System On
 
 Evaluate strongly typed `@Generable` structs and enums against application state in **40–150ms** with zero hallucinations, calibrated probabilities, and full Apple Intelligence API compatibility.
 
+> [!WARNING]
+> **Security Advisory: Never Embed API Keys in Mobile Apps**
+> TypeSafe AI API keys (`TYPESAFE_API_KEY`) must **never** be hardcoded or bundled inside client-side iOS, iPadOS, watchOS, or visionOS application binaries. Anyone can inspect or decompile mobile apps to extract embedded secrets.
+>
+> **Safe Deployment Patterns:**
+> - **Backend / Server / CLI**: Use this library directly in server-side Swift services, macOS backend daemons, developer tools, or CLI applications where environment variables are kept server-side.
+> - **Mobile Applications**: Route mobile requests through your own authenticated backend gateway or proxy service that securely manages the TypeSafe API key.
+
 ---
 
 ## 💡 Why Decision Models in Apple Foundation Models?
