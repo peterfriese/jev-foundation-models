@@ -34,6 +34,15 @@ Icon\r
 *.pem
 *credentials*.json
 
+# Node & Firebase Functions
+node_modules/
+**/node_modules/
+lib/
+**/functions/lib/
+.firebase/
+firebase-debug.log
+firestore-debug.log
+
 # OpenCode / Editors
 .opencode/
 .vscode/
