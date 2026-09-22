@@ -12,7 +12,7 @@ This guide walks you through integrating Jev into your Apple platform applicatio
 
 > [!WARNING]
 > **API Key Security in Mobile Apps**
-> Never embed or hardcode your `TYPESAFE_API_KEY` into mobile application bundles (iOS, iPadOS, visionOS). Client application bundles can be easily inspected or decompiled. For mobile clients, forward requests through a secure server proxy that injects the key, or use this package in backend services, macOS tools, and server-side Swift.
+> Never embed or hardcode your `TYPESAFE_API_KEY` into mobile application bundles (iOS, iPadOS, visionOS). Client application bundles can be easily inspected or decompiled. For mobile clients, forward requests through a secure server proxy that injects the key (see the [Mobile Security Guide](mobile-security.md) for a complete Apple App Attest / Firebase App Check implementation), or use this package directly in backend services, macOS tools, and server-side Swift.
 
 ---
 

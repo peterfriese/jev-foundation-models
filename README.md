@@ -18,7 +18,7 @@ Evaluate strongly typed `@Generable` structs and enums against application state
 >
 > **Safe Deployment Patterns:**
 > - **Backend / Server / CLI**: Use this library directly in server-side Swift services, macOS backend daemons, developer tools, or CLI applications where environment variables are kept server-side.
-> - **Mobile Applications**: Route mobile requests through your own authenticated backend gateway or proxy service that securely manages the TypeSafe API key.
+> - **Mobile Applications**: Route mobile requests through your own authenticated backend gateway or proxy service that securely manages the TypeSafe API key (see [Mobile Security Guide](docs/mobile-security.md) for a ready-to-use Firebase App Check & Apple App Attest architecture).
 
 ---
 
