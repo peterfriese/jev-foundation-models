@@ -70,7 +70,12 @@ public final class ScannerViewModel {
         isEvaluating = true
 
         Task {
-            if let realProduct = await openFoodFacts.fetchProduct(barcode: barcode) {
+            let fetched = await openFoodFacts.fetchProduct(barcode: barcode)
+
+            // Race guard: ignore stale network lookup if a newer barcode was scanned in the meantime
+            guard self.cameraService.recognizedBarcode == barcode else { return }
+
+            if let realProduct = fetched {
                 self.selectedProduct = realProduct
                 self.scanStatus = "Verified: \(realProduct.brand)"
             } else {

@@ -81,3 +81,22 @@ let transport = FirebaseAppCheckTransport(proxyEndpoint: proxyURL, tokenStrategy
 let model = JevLanguageModel(apiKey: "app-check", transport: transport)
 let session = LanguageModelSession(model: model)
 ```
+
+---
+
+### 3. Production Hardening: User Authorization & Abuse Quotas
+
+While Firebase App Check (via Apple App Attest) cryptographically verifies that requests originate from a **genuine, un-tampered iOS application binary**, it verifies *device and application integrity*, not *user identity* or *consumption limits*.
+
+In a production environment where upstream TypeSafe AI tokens carry real financial cost, deploy the following defense-in-depth measures:
+
+#### A. User Identity Binding (Firebase Auth / Sign in with Apple)
+Pass an authenticated user token (`Authorization: Bearer <ID_TOKEN>`) alongside the `X-Firebase-AppCheck` header. The proxy verifies the caller's identity via `getAuth().verifyIdToken(idToken)`:
+- Anonymous users: strictly limited rate limits (e.g. 5 scans/day).
+- Authenticated subscribers: higher tiered quotas based on their subscription status.
+
+#### B. Server-Side Rate Limiting (Firestore / Redis)
+Store a rolling timestamp window or token bucket per user UID in Firestore or Google Cloud Memorystore (Redis). Reject calls with `HTTP 429 Too Many Requests` if the user exceeds policy limits (e.g. max 20 requests/minute).
+
+#### C. Google Cloud Armor / API Gateway Ingress Rules
+For high-traffic deployments, terminate requests behind Cloud Armor or Google Cloud API Gateway with volumetric IP-level throttling to absorb malicious traffic bursts at Google's global edge before containers spin up.
