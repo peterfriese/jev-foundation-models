@@ -173,6 +173,22 @@ swift run ticket-triage-demo
 swift run ticket-triage-demo "Our server deployment failed with error 500."
 ```
 
+### 3. Smart Directory Organizer with Dynamic Profiles (`file-organizer-demo`)
+
+Demonstrates Apple Foundation Models **Dynamic Profiles** (`LanguageModelSession.DynamicProfile`), runtime state adaptation with `@SessionPropertyEntry`, turn isolation via `.historyTransform`, and multi-primitive Jev System One triage:
+- **Dynamic Profile Adaptation**: Switches between Semantic Domain and Actionable Workflow triaging by modifying session properties in-place without rebuilding the session.
+- **Sensitive Content Quarantine**: Flags credentials, API keys, and secrets via `noul` and quarantines them into `Quarantine_Vault/`.
+- **Review Queue for Low-Confidence Items**: Calibrated `score` routes uncertain content to `Review_Queue/` for human verification.
+- **Turn Isolation**: Uses `.historyTransform` to prune prior file turns from the transcript, keeping batch evaluations stateless and token-efficient.
+
+```bash
+# Run the interactive sandbox walkthrough
+swift run file-organizer-demo --demo
+
+# Organize any directory with dry-run preview (or add --apply to execute moves)
+swift run file-organizer-demo --path ~/Downloads --strategy domain
+```
+
 ---
 
 ## 📄 License

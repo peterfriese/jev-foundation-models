@@ -69,4 +69,13 @@ public extension LanguageModelSession.Response {
     func confidence(for question: String) -> Double? {
         confidenceScores[question]
     }
+
+    /// The server-side inference time (in milliseconds) reported by TypeSafe AI gateway.
+    var serverDurationMs: Double? {
+        guard let content = metadata["serverDurationMs"] else { return nil }
+        if let str = try? content.value(String.self), let val = Double(str) {
+            return val
+        }
+        return Double(content.jsonString)
+    }
 }

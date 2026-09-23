@@ -65,6 +65,10 @@ public final class JevExecutor: LanguageModelExecutor, Sendable {
             "model": GeneratedContent(jevResponse.model)
         ]
 
+        if let serverDurationMs = jevResponse.serverDurationMs {
+            metadata["serverDurationMs"] = GeneratedContent(String(format: "%.1f", serverDurationMs))
+        }
+
         if let probabilitiesJSON = synthesizer.extractProbabilitiesJSON(from: jevResponse.answers) {
             metadata["probabilities"] = (try? GeneratedContent(json: probabilitiesJSON)) ?? GeneratedContent(probabilitiesJSON)
         }
