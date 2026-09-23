@@ -3,7 +3,7 @@ import Foundation
 /// A transport abstraction responsible for delivering requests to the TypeSafe AI Jev decision API.
 public protocol JevTransport: Sendable {
     /// Dispatches a `JevRequest` and returns the deserialized `JevResponse`.
-    func send(request: JevRequest, apiKey: String, endpoint: URL) async throws -> JevResponse
+    func send(request: JevRequest, apiKey: String?, endpoint: URL) async throws -> JevResponse
 }
 
 // See tech-notes/0006-http-resilience-and-confidence-routing.md
@@ -60,14 +60,17 @@ public struct URLSessionTransport: JevTransport, Hashable, Sendable {
         hasher.combine(retryPolicy)
     }
 
-    public func send(request: JevRequest, apiKey: String, endpoint: URL) async throws -> JevResponse {
+    public func send(request: JevRequest, apiKey: String?, endpoint: URL) async throws -> JevResponse {
+        guard let apiKey, !apiKey.isEmpty else {
+            throw JevError.missingAPIKey
+        }
+
         let requestData: Data
         do {
             requestData = try JSONEncoder().encode(request)
         } catch {
             throw JevError.decodingError("Failed to encode JevRequest: \(error.localizedDescription)")
         }
-
         var urlRequest = URLRequest(url: endpoint)
         urlRequest.httpMethod = "POST"
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -150,7 +153,7 @@ public struct MockJevTransport: JevTransport, Hashable, Sendable {
         hasher.combine(id)
     }
 
-    public func send(request: JevRequest, apiKey: String, endpoint: URL) async throws -> JevResponse {
+    public func send(request: JevRequest, apiKey: String?, endpoint: URL) async throws -> JevResponse {
         try await handler(request)
     }
 }
@@ -158,7 +161,7 @@ public struct MockJevTransport: JevTransport, Hashable, Sendable {
 /// A type-erased `JevTransport` that conforms to `Hashable` and `Sendable`.
 public struct AnyJevTransport: JevTransport, Hashable, Sendable {
     public let id: UUID
-    private let _send: @Sendable (JevRequest, String, URL) async throws -> JevResponse
+    private let _send: @Sendable (JevRequest, String?, URL) async throws -> JevResponse
 
     public init(_ transport: some JevTransport, id: UUID = UUID()) {
         self.id = id
@@ -178,7 +181,7 @@ public struct AnyJevTransport: JevTransport, Hashable, Sendable {
         hasher.combine(id)
     }
 
-    public func send(request: JevRequest, apiKey: String, endpoint: URL) async throws -> JevResponse {
+    public func send(request: JevRequest, apiKey: String?, endpoint: URL) async throws -> JevResponse {
         try await _send(request, apiKey, endpoint)
     }
 }

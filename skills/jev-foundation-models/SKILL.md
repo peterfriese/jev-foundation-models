@@ -125,7 +125,7 @@ import JevFoundationModels
 public struct AppCheckTransport: JevTransport, Sendable {
     public init() {}
 
-    public func send(request: JevRequest, endpoint: URL, apiKey: String) async throws -> JevResponse {
+    public func send(request: JevRequest, apiKey: String?, endpoint: URL) async throws -> JevResponse {
         // 1. Fetch hardware-backed App Check token
         let token = try await AppCheck.appCheck().token(forcingRefresh: false)
         
@@ -142,9 +142,8 @@ public struct AppCheckTransport: JevTransport, Sendable {
     }
 }
 
-// Configuration with custom transport:
+// Configuration with custom transport (no API key needed — the key lives on your backend proxy):
 let model = JevLanguageModel(
-    apiKey: "", // Key is managed securely on your backend proxy
     endpoint: URL(string: "https://your-cloud-function.cloudfunctions.net/triageProxy")!,
     transport: AppCheckTransport()
 )

@@ -241,7 +241,7 @@ public struct FirebaseAppCheckTransport: JevTransport, Sendable {
 
     public func send(
         request: JevRequest,
-        apiKey: String,
+        apiKey: String?,
         endpoint: URL
     ) async throws -> JevResponse {
         // 1. Obtain App Check token based on chosen strategy
@@ -301,8 +301,8 @@ let proxyURL = URL(string: "https://us-central1-myproject.cloudfunctions.net/sys
 let transport = FirebaseAppCheckTransport(proxyEndpoint: proxyURL, tokenStrategy: .cached)
 
 // 2. Configure JevLanguageModel with the custom transport
-// Note: apiKey is a placeholder since authentication is handled via App Check
-let jev = JevLanguageModel(apiKey: "app-check-authenticated", transport: transport)
+// No API key is needed — key management lives on the server side of the proxy
+let jev = JevLanguageModel(transport: transport)
 
 // 3. Initialize standard Apple LanguageModelSession
 let session = LanguageModelSession(model: jev)

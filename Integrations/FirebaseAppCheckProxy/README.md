@@ -68,7 +68,7 @@ Best for UI transitions, autocomplete, and interactive feedback loops (`< 1 ms` 
 ```swift
 let proxyURL = URL(string: "https://us-central1-<project-id>.cloudfunctions.net/systemone")!
 let transport = FirebaseAppCheckTransport(proxyEndpoint: proxyURL, tokenStrategy: .cached)
-let model = JevLanguageModel(apiKey: "app-check", transport: transport)
+let model = JevLanguageModel(transport: transport)
 let session = LanguageModelSession(model: model)
 ```
 
@@ -78,6 +78,6 @@ Best for high-value triage, automated decisions, or billing-sensitive actions (`
 ```swift
 let proxyURL = URL(string: "https://us-central1-<project-id>.cloudfunctions.net/systemone")!
 let transport = FirebaseAppCheckTransport(proxyEndpoint: proxyURL, tokenStrategy: .singleUse)
-let model = JevLanguageModel(apiKey: "app-check", transport: transport)
+let model = JevLanguageModel(transport: transport)
 let session = LanguageModelSession(model: model)
 ```

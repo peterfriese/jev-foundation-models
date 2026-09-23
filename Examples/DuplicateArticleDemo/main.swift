@@ -21,7 +21,7 @@ if let key = apiKey {
     model = JevLanguageModel(apiKey: key, retryPolicy: retryPolicy)
 } else {
     print("ℹ️  No TYPESAFE_API_KEY detected. Running in deterministic offline demonstration mode.")
-    model = JevLanguageModel(apiKey: "offline-mock", transport: createOfflineMockTransport(), retryPolicy: retryPolicy)
+    model = JevLanguageModel(transport: createOfflineMockTransport(), retryPolicy: retryPolicy)
 }
 
 let routingPolicy = RoutingPolicy(
