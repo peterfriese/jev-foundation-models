@@ -124,7 +124,6 @@ public struct JevAnswer: Codable, Sendable, Equatable {
 
     /// Converts this answer into a typed `ScoreValue` if it is a rubric `score` answer.
     public var scoreValue: ScoreValue? {
-    public var scoreValue: ScoreValue? {
         scoreValue(minimum: nil, maximum: nil, isInteger: false)
     }
 
@@ -150,6 +149,7 @@ public struct JevAnswer: Codable, Sendable, Equatable {
             rawScore: score,
             minimum: minimum,
             maximum: maximum,
+            isInteger: isInteger,
             levelCount: levelCount
         )
         return ScoreValue(
@@ -176,16 +176,26 @@ public struct JevAnswer: Codable, Sendable, Equatable {
         rawScore: Double,
         minimum: Double?,
         maximum: Double?,
+        isInteger: Bool,
         levelCount: Int
     ) -> Double {
         guard let minimum, let maximum else { return rawScore }
         guard minimum <= maximum else { return rawScore }
 
+        let span = maximum - minimum
+        if isInteger,
+           minimum.rounded() == minimum,
+           maximum.rounded() == maximum,
+           levelCount > 1,
+           span == Double(levelCount - 1),
+           rawScore >= 0, rawScore <= Double(levelCount - 1) {
+            return minimum + rawScore
+        }
+
         if rawScore >= minimum && rawScore <= maximum {
             return rawScore
         }
 
-        let span = maximum - minimum
         if levelCount > 1, rawScore >= 0, rawScore <= Double(levelCount - 1) {
             return minimum + (rawScore / Double(levelCount - 1)) * span
         }
