@@ -40,6 +40,14 @@ public struct SafetyIndicatorBanner: View {
                 "Safe for \(profile.shortName)",
                 "No conflicting allergens or ingredients detected (\(pct)% confidence)"
             )
+        } else if decision.primaryFlag != .none {
+            // Direct dietary conflict takes precedence over trace facility advisory
+            return (
+                .red,
+                "xmark.octagon.fill",
+                "Not Safe: \(decision.primaryFlag.displayName)",
+                "Breaches \(profile.title) requirements"
+            )
         } else if decision.allergenRisk == 1 {
             return (
                 .orange,
@@ -51,7 +59,7 @@ public struct SafetyIndicatorBanner: View {
             return (
                 .red,
                 "xmark.octagon.fill",
-                "Not Safe: \(decision.primaryFlag.displayName)",
+                "Not Safe: Conflict Detected",
                 "Breaches \(profile.title) requirements"
             )
         }

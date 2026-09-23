@@ -65,7 +65,16 @@ private struct OFFProduct: Decodable {
         let prodName = product_name ?? "Food Item"
         let category = categories?.components(separatedBy: ",").first?.trimmingCharacters(in: .whitespaces) ?? "Grocery"
 
-        // Align serving size label with whether per-serving or per-100g values were retrieved
+        let trimmedIngredients = ingredients_text?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let hasIngredients = trimmedIngredients != nil && !trimmedIngredients!.isEmpty
+
+        // If ingredients are absent, prefix ID with "unlisted-ingredients-" so ScannerViewModel skips false Jev evaluation
+        let productId = hasIngredients ? barcode : "unlisted-ingredients-\(barcode)"
+        let ingredientsPayload = hasIngredients
+            ? trimmedIngredients!
+            : "Ingredients not recorded in Open Food Facts registry for \(brandName) \(prodName). Point camera at the ingredients list on the packaging to verify with Jev."
+
+        // Determine serving label based on whether per-serving values were populated
         let hasServingValues = nutriments?.energyKcalServing != nil || nutriments?.fatServing != nil
         let serving: String
         if hasServingValues, let declaredServing = serving_size, !declaredServing.isEmpty {
@@ -74,27 +83,28 @@ private struct OFFProduct: Decodable {
             serving = "100g"
         }
 
-        let cals = Int(hasServingValues ? (nutriments?.energyKcalServing ?? 0) : (nutriments?.energyKcal100g ?? 0))
-        let fat = hasServingValues ? (nutriments?.fatServing ?? 0.0) : (nutriments?.fat100g ?? 0.0)
-        let satFat = hasServingValues ? (nutriments?.saturatedFatServing ?? 0.0) : (nutriments?.saturatedFat100g ?? 0.0)
-        let sodiumG = hasServingValues ? (nutriments?.sodiumServing ?? 0.0) : (nutriments?.sodium100g ?? 0.0)
+        // Per-nutrient fallback: fall back individually to 100g value if _serving field is absent
+        let cals = Int(nutriments?.energyKcalServing ?? nutriments?.energyKcal100g ?? 0)
+        let fat = nutriments?.fatServing ?? nutriments?.fat100g ?? 0.0
+        let satFat = nutriments?.saturatedFatServing ?? nutriments?.saturatedFat100g ?? 0.0
+        let sodiumG = nutriments?.sodiumServing ?? nutriments?.sodium100g ?? 0.0
         let sodiumMg = Int(sodiumG * 1000)
-        let carbs = hasServingValues ? (nutriments?.carbohydratesServing ?? 0.0) : (nutriments?.carbohydrates100g ?? 0.0)
-        let fiber = hasServingValues ? (nutriments?.fiberServing ?? 0.0) : (nutriments?.fiber100g ?? 0.0)
-        let sugars = hasServingValues ? (nutriments?.sugarsServing ?? 0.0) : (nutriments?.sugars100g ?? 0.0)
-        let addedSugars = nutriments?.addedSugarsServing ?? 0.0
-        let protein = hasServingValues ? (nutriments?.proteinsServing ?? 0.0) : (nutriments?.proteins100g ?? 0.0)
+        let carbs = nutriments?.carbohydratesServing ?? nutriments?.carbohydrates100g ?? 0.0
+        let fiber = nutriments?.fiberServing ?? nutriments?.fiber100g ?? 0.0
+        let sugars = nutriments?.sugarsServing ?? nutriments?.sugars100g ?? 0.0
+        let addedSugars = nutriments?.addedSugarsServing ?? nutriments?.addedSugars100g ?? 0.0
+        let protein = nutriments?.proteinsServing ?? nutriments?.proteins100g ?? 0.0
 
         let warning = allergens?.isEmpty == false ? "Allergens reported: \(allergens!)" : nil
 
         return FoodProduct(
-            id: barcode,
+            id: productId,
             brand: brandName,
             name: prodName,
             packageCategory: category,
             barcode: barcode,
             iconSystemName: "barcode.viewfinder",
-            ingredientsText: ingredients_text ?? "Ingredients not recorded in database. Please point camera at the ingredients panel to verify with Jev.",
+            ingredientsText: ingredientsPayload,
             facilityWarning: warning,
             nutrition: NutritionFacts(
                 servingSize: serving,
@@ -128,6 +138,7 @@ private struct OFFNutriments: Decodable {
     let sugarsServing: Double?
     let sugars100g: Double?
     let addedSugarsServing: Double?
+    let addedSugars100g: Double?
     let proteinsServing: Double?
     let proteins100g: Double?
 
@@ -147,6 +158,7 @@ private struct OFFNutriments: Decodable {
         case sugarsServing = "sugars_serving"
         case sugars100g = "sugars_100g"
         case addedSugarsServing = "added-sugars_serving"
+        case addedSugars100g = "added-sugars_100g"
         case proteinsServing = "proteins_serving"
         case proteins100g = "proteins_100g"
     }

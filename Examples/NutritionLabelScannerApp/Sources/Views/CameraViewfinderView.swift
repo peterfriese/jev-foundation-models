@@ -159,29 +159,34 @@ public struct CameraViewfinderView: View {
 
     private var topControlBar: some View {
         HStack(spacing: 12) {
-            // Flashlight Toggle
-            Button {
-                let impact = UIImpactFeedbackGenerator(style: .light)
-                impact.impactOccurred()
-                viewModel.toggleFlashlight()
-            } label: {
-                Image(systemName: viewModel.cameraService.isTorchOn ? "flashlight.on.fill" : "flashlight.off.fill")
-                    .font(.body)
-                    .foregroundStyle(viewModel.cameraService.isTorchOn ? .yellow : .primary)
-            }
-            .buttonStyle(.glass)
-            .buttonBorderShape(.circle)
-            .accessibilityLabel(viewModel.cameraService.isTorchOn ? "Turn flashlight off" : "Turn flashlight on")
+            // Grouped top-left glass tool buttons with native liquid merge
+            GlassEffectContainer(spacing: 8) {
+                HStack(spacing: 8) {
+                    // Flashlight Toggle
+                    Button {
+                        let impact = UIImpactFeedbackGenerator(style: .light)
+                        impact.impactOccurred()
+                        viewModel.toggleFlashlight()
+                    } label: {
+                        Image(systemName: viewModel.cameraService.isTorchOn ? "flashlight.on.fill" : "flashlight.off.fill")
+                            .font(.body)
+                            .foregroundStyle(viewModel.cameraService.isTorchOn ? .yellow : .primary)
+                    }
+                    .buttonStyle(.glass)
+                    .buttonBorderShape(.circle)
+                    .accessibilityLabel(viewModel.cameraService.isTorchOn ? "Turn flashlight off" : "Turn flashlight on")
 
-            // Photos Library Scan Picker (Scan any nutrition label photo)
-            PhotosPicker(selection: $viewModel.selectedPhotoItem, matching: .images) {
-                Image(systemName: "photo.on.rectangle.angled")
-                    .font(.body)
-                    .foregroundStyle(.primary)
+                    // Photos Library Scan Picker (Scan any nutrition label photo)
+                    PhotosPicker(selection: $viewModel.selectedPhotoItem, matching: .images) {
+                        Image(systemName: "photo.on.rectangle.angled")
+                            .font(.body)
+                            .foregroundStyle(.primary)
+                    }
+                    .buttonStyle(.glass)
+                    .buttonBorderShape(.circle)
+                    .accessibilityLabel("Import photo of nutrition label from library")
+                }
             }
-            .buttonStyle(.glass)
-            .buttonBorderShape(.circle)
-            .accessibilityLabel("Import photo of nutrition label from library")
 
             Spacer()
 

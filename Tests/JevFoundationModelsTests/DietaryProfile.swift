@@ -1,1 +1,0 @@
-../../Examples/NutritionLabelScannerApp/Sources/Models/DietaryProfile.swift

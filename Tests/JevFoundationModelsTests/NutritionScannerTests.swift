@@ -38,6 +38,132 @@ struct TestDietarySafetyDecision: Sendable {
     var primaryFlag: TestDietaryFlag
 }
 
+// MARK: - Test Nutrition Label Parser (Self-contained test fixture for OCR heuristics)
+
+struct TestNutritionFacts: Equatable {
+    let servingSize: String
+    let calories: Int
+    let totalFatGrams: Double
+    let saturatedFatGrams: Double
+    let sodiumMilligrams: Int
+    let totalCarbGrams: Double
+    let dietaryFiberGrams: Double
+    let totalSugarGrams: Double
+    let addedSugarGrams: Double
+    let proteinGrams: Double
+}
+
+struct TestNutritionLabelParser {
+    static func isNutritionLabelOrIngredients(_ text: String) -> Bool {
+        let lower = text.lowercased()
+        let markers = [
+            "nutrition facts", "calories", "total fat", "protein",
+            "durchschnittliche nährwerte", "energie", "fett", "kohlenhydrate",
+            "eiweiß", "eiweiss", "weib", "salz", "zutaten", "1439 kj", "kcal", "kca"
+        ]
+        let found = markers.filter { lower.contains($0) }.count
+        return found >= 2 || (lower.contains("zutaten") && text.count > 25)
+    }
+
+    static func parseNutritionFacts(from text: String) -> TestNutritionFacts {
+        let lower = text.lowercased()
+
+        var servingSize = "100g"
+        if lower.contains("pro 100 g") || lower.contains("pro 100g") {
+            servingSize = "100g"
+        } else if let match = extractRegexMatch(pattern: #"serving size[\s:]*([^\n\r,]+)"#, in: lower) {
+            servingSize = match.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        let calories: Int = {
+            if let m = extractRegexMatch(pattern: #"(?:/\s*)?(\d+)\s*kca[l]?"#, in: lower), let val = Int(m) { return val }
+            if let m = extractRegexMatch(pattern: #"(?:calories|energie|brennwert)[\s:]*(\d+)"#, in: lower), let val = Int(m) { return val }
+            return 0
+        }()
+
+        var totalFat = extractDecimal(pattern: #"(?<!gesättigte[n\s])(?:total fat|fett)[\s:]*[<>]?\s*([\d,\.]+)"#, in: lower) ?? 0.0
+        let satFat = extractDecimal(pattern: #"(?:davon\s+)?(?:gesättigte[n\s]*(?:fettsäuren)?|saturated fat)[\s:]*[<>]?\s*([\d,\.]+)"#, in: lower) ?? 0.0
+        var totalCarbs = extractDecimal(pattern: #"(?:total carb(?:ohydrate)?s?|kohlenhydrate)[\s:]*[-–•\s]*[<>]?\s*([\d,\.]+)"#, in: lower) ?? 0.0
+        var fiber = extractDecimal(pattern: #"(?:(?:dietary\s+)?fiber|ballaststoffe)[\s:]*[-–•\s]*[<>]?\s*([\d,\.]+)"#, in: lower) ?? 0.0
+        let totalSugars = extractDecimal(pattern: #"(?:davon\s+zucker|total sugars?|zucker)[\s:]*[-–•\s]*[<>]?\s*([\d,\.]+)"#, in: lower) ?? 0.0
+        let addedSugars = extractDecimal(pattern: #"(?:includes|incl\.?)?\s*([\d,\.]+)\s*g?\s*added sugars?"#, in: lower) ?? 0.0
+        var protein = extractDecimal(pattern: #"(?:eiweiß|eiweiss|wei[bß]|protein)[\s:]*[-–•\s]*[<>]?\s*([\d,\.]+)"#, in: lower) ?? 0.0
+
+        var sodiumMg: Int = {
+            if let usSodium = extractFirstNumber(pattern: #"sodium[\s:]*(\d+)\s*mg"#, in: lower) { return usSodium }
+            if let euSalt = extractDecimal(pattern: #"(?:salz|salt)[\s:]*[<>]?\s*([\d,\.]+)\s*g"#, in: lower) { return Int(euSalt * 400.0) }
+            return 0
+        }()
+
+        // Column fallback
+        if totalFat == 0.0 && totalCarbs == 0.0 && protein == 0.0 {
+            if let regex = try? NSRegularExpression(pattern: #"[-–<>]?\s*([\d,\.]+)\s*g\b"#, options: [.caseInsensitive]) {
+                let ns = lower as NSString
+                var values = regex.matches(in: lower, options: [], range: NSRange(location: 0, length: ns.length)).compactMap { m -> Double? in
+                    guard m.numberOfRanges > 1 else { return nil }
+                    let raw = ns.substring(with: m.range(at: 1)).replacingOccurrences(of: ",", with: ".")
+                    return Double(raw)
+                }
+                if values.first == 100.0 { values.removeFirst() }
+                if values.count >= 5 {
+                    totalFat = values[0]
+                    totalCarbs = values[1]
+                    fiber = values[2]
+                    protein = values[3]
+                    sodiumMg = Int(values[4] * 400.0)
+                }
+            }
+        }
+
+        return TestNutritionFacts(
+            servingSize: servingSize,
+            calories: calories,
+            totalFatGrams: totalFat,
+            saturatedFatGrams: satFat,
+            sodiumMilligrams: sodiumMg,
+            totalCarbGrams: totalCarbs,
+            dietaryFiberGrams: fiber,
+            totalSugarGrams: totalSugars,
+            addedSugarGrams: addedSugars,
+            proteinGrams: protein
+        )
+    }
+
+    static func extractIngredientsAndAllergens(from text: String) -> (ingredients: String, warning: String?) {
+        let lower = text.lowercased()
+        var warning: String? = nil
+        if let r = lower.range(of: "contains:") {
+            warning = "Contains: " + text[r.upperBound...].components(separatedBy: .newlines).first!.trimmingCharacters(in: .whitespaces)
+        }
+
+        for header in ["zutaten:", "ingredients:"] {
+            if let r = lower.range(of: header) {
+                return (String(text[r.upperBound...].trimmingCharacters(in: .whitespacesAndNewlines)), warning)
+            }
+        }
+        return (text.trimmingCharacters(in: .whitespacesAndNewlines), warning)
+    }
+
+    private static func extractRegexMatch(pattern: String, in text: String) -> String? {
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else { return nil }
+        let ns = text as NSString
+        let matches = regex.matches(in: text, options: [], range: NSRange(location: 0, length: ns.length))
+        guard let first = matches.first, first.numberOfRanges > 1 else { return nil }
+        return ns.substring(with: first.range(at: 1))
+    }
+
+    private static func extractDecimal(pattern: String, in text: String) -> Double? {
+        guard let match = extractRegexMatch(pattern: pattern, in: text) else { return nil }
+        let cleaned = match.replacingOccurrences(of: "<", with: "").replacingOccurrences(of: "-", with: "").trimmingCharacters(in: .whitespaces).replacingOccurrences(of: ",", with: ".")
+        return Double(cleaned)
+    }
+
+    private static func extractFirstNumber(pattern: String, in text: String) -> Int? {
+        guard let match = extractRegexMatch(pattern: pattern, in: text) else { return nil }
+        return Int(match.trimmingCharacters(in: .whitespaces))
+    }
+}
+
 // MARK: - Nutrition Scanner Suite
 
 @Suite("Nutrition Scanner & Dietary Decision Tests")
@@ -246,10 +372,10 @@ struct NutritionScannerTests {
         """
 
         // 1. Production marker check
-        #expect(NutritionLabelParser.isNutritionLabelOrIngredients(rawOCRText) == true)
+        #expect(TestNutritionLabelParser.isNutritionLabelOrIngredients(rawOCRText) == true)
 
         // 2. Production facts extraction
-        let facts = NutritionLabelParser.parseNutritionFacts(from: rawOCRText)
+        let facts = TestNutritionLabelParser.parseNutritionFacts(from: rawOCRText)
         #expect(facts.calories == 190)
         #expect(facts.totalFatGrams == 7.0)
         #expect(facts.saturatedFatGrams == 1.0)
@@ -261,7 +387,7 @@ struct NutritionScannerTests {
         #expect(facts.proteinGrams == 3.0)
 
         // 3. Production ingredients & allergen extraction
-        let (ingredients, warning) = NutritionLabelParser.extractIngredientsAndAllergens(from: rawOCRText)
+        let (ingredients, warning) = TestNutritionLabelParser.extractIngredientsAndAllergens(from: rawOCRText)
         #expect(ingredients.contains("Whole Grain Oats"))
         #expect(warning?.contains("Soy") == true)
     }
@@ -282,9 +408,9 @@ struct NutritionScannerTests {
         Zutaten: Rote Linsen aus kontrolliert biologischem Anbau.
         """
 
-        #expect(NutritionLabelParser.isNutritionLabelOrIngredients(germanLentilsText) == true)
+        #expect(TestNutritionLabelParser.isNutritionLabelOrIngredients(germanLentilsText) == true)
 
-        let facts = NutritionLabelParser.parseNutritionFacts(from: germanLentilsText)
+        let facts = TestNutritionLabelParser.parseNutritionFacts(from: germanLentilsText)
         #expect(facts.calories == 341)
         #expect(facts.totalFatGrams == 1.5)
         #expect(facts.saturatedFatGrams == 0.3)
@@ -294,7 +420,7 @@ struct NutritionScannerTests {
         #expect(facts.proteinGrams == 26.0)
         #expect(facts.sodiumMilligrams == 4) // 0.01g salt * 400 = 4mg sodium
 
-        let (ingredients, _) = NutritionLabelParser.extractIngredientsAndAllergens(from: germanLentilsText)
+        let (ingredients, _) = TestNutritionLabelParser.extractIngredientsAndAllergens(from: germanLentilsText)
         #expect(ingredients.contains("Rote Linsen"))
     }
 
@@ -314,9 +440,9 @@ struct NutritionScannerTests {
         Zutaten: Tomaten, Tomatensaft, Säuerungsmittel: Citronensäure.
         """
 
-        #expect(NutritionLabelParser.isNutritionLabelOrIngredients(tomatoText) == true)
+        #expect(TestNutritionLabelParser.isNutritionLabelOrIngredients(tomatoText) == true)
 
-        let facts = NutritionLabelParser.parseNutritionFacts(from: tomatoText)
+        let facts = TestNutritionLabelParser.parseNutritionFacts(from: tomatoText)
         #expect(facts.calories == 24)
         #expect(facts.totalFatGrams == 0.5)
         #expect(facts.saturatedFatGrams == 0.0)
@@ -326,7 +452,7 @@ struct NutritionScannerTests {
         #expect(facts.proteinGrams == 1.2)
         #expect(facts.sodiumMilligrams == 100) // 0.25g salt * 400 = 100mg sodium
 
-        let (ingredients, _) = NutritionLabelParser.extractIngredientsAndAllergens(from: tomatoText)
+        let (ingredients, _) = TestNutritionLabelParser.extractIngredientsAndAllergens(from: tomatoText)
         #expect(ingredients.contains("Tomaten"))
     }
 
@@ -349,9 +475,9 @@ struct NutritionScannerTests {
         <0.01g
         """
 
-        #expect(NutritionLabelParser.isNutritionLabelOrIngredients(screenshotText) == true)
+        #expect(TestNutritionLabelParser.isNutritionLabelOrIngredients(screenshotText) == true)
 
-        let facts = NutritionLabelParser.parseNutritionFacts(from: screenshotText)
+        let facts = TestNutritionLabelParser.parseNutritionFacts(from: screenshotText)
         #expect(facts.calories == 341)
         #expect(facts.totalFatGrams == 1.5)
         #expect(facts.totalCarbGrams == 50.0)

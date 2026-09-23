@@ -1,6 +1,7 @@
 import SwiftUI
 import Foundation
 import PhotosUI
+import Observation
 import FoundationModels
 import JevFoundationModels
 

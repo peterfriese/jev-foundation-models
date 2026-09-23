@@ -1,6 +1,7 @@
 import AVFoundation
 import Vision
 import SwiftUI
+import Observation
 
 // MARK: - Camera Scanner Service (AVFoundation + Vision OCR + Barcode Engine)
 
@@ -128,14 +129,19 @@ public final class CameraScannerService: NSObject {
     }
 
     public func toggleTorch() {
-        guard let device = videoDevice, device.hasTorch else { return }
-        do {
-            try device.lockForConfiguration()
-            isTorchOn.toggle()
-            device.torchMode = isTorchOn ? .on : .off
-            device.unlockForConfiguration()
-        } catch {
-            print("Failed to toggle torch: \(error)")
+        let targetState = !isTorchOn
+        sessionQueue.async { [weak self] in
+            guard let self = self, let device = self.videoDevice, device.hasTorch else { return }
+            do {
+                try device.lockForConfiguration()
+                device.torchMode = targetState ? .on : .off
+                device.unlockForConfiguration()
+                DispatchQueue.main.async {
+                    self.isTorchOn = targetState
+                }
+            } catch {
+                print("Failed to toggle torch: \(error)")
+            }
         }
     }
 
