@@ -143,7 +143,7 @@ public struct ArticleDeduplicator: Sendable {
         )
 
         // Extract calibrated noul probability directly from Jev response metadata
-        let probability = response.probability(for: "isDuplicate") ?? Probability(clamping: response.content.isDuplicate ? 1.0 : 0.0)
+        let probability = response.probability(for: "isDuplicate") ?? (response.content.isDuplicate ? 1.0 : 0.0)
         let judgement = response.judgement(for: "isDuplicate", policy: policy)
         let meetsThreshold = probability >= threshold
 
@@ -152,7 +152,7 @@ public struct ArticleDeduplicator: Sendable {
             output: response.usage.output.totalTokenCount
         )
 
-        return (isDuplicate: meetsThreshold, probability: probability.value, judgement: judgement, tokenUsage: usage)
+        return (isDuplicate: meetsThreshold, probability: probability, judgement: judgement, tokenUsage: usage)
     }
 
     // MARK: - Full Deduplication Pipeline

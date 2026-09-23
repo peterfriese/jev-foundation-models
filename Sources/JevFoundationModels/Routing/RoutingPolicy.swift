@@ -112,6 +112,6 @@ public struct RoutingPolicy: Sendable, Hashable {
 
     /// Decides the boolean judgment for a question from a Foundation Models `LanguageModelSession.Response`.
     public func decideNoul<T>(_ response: LanguageModelSession.Response<T>, of question: String) -> NoulJudgement {
-        decide(response.probability(for: question))
+        decide(response.typedProbability(for: question))
     }
 }

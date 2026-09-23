@@ -141,7 +141,7 @@ struct URLSessionTransportTests {
         #expect(recorder.delays[0] == .seconds(2))
     }
 
-    @Test("529 Site Overloaded exhausts maxAttempts and throws .overloaded")
+    @Test("529 Site Overloaded exhausts maxAttempts and throws .apiError")
     func test529ExhaustsMaxAttempts() async throws {
         MockHTTPProtocol.reset()
         MockHTTPProtocol.enqueue(statusCode: 529, body: Data("Overloaded".utf8))
@@ -158,9 +158,16 @@ struct URLSessionTransportTests {
             now: { Date() }
         )
 
-        await #expect(throws: JevError.overloaded) {
-            try await transport.send(request: dummyRequest, apiKey: "key", endpoint: endpoint)
+        let matchesExpectedError: Bool
+        do {
+            _ = try await transport.send(request: dummyRequest, apiKey: "key", endpoint: endpoint)
+            matchesExpectedError = false
+        } catch let error as JevError {
+            matchesExpectedError = (error == JevError.apiError(statusCode: 529, message: "Overloaded"))
+        } catch {
+            matchesExpectedError = false
         }
+        #expect(matchesExpectedError)
 
         #expect(MockHTTPProtocol.requestCount == 3)
         // 3 attempts means 2 retry sleeps; no trailing sleep on final failure
@@ -178,9 +185,16 @@ struct URLSessionTransportTests {
             retryPolicy: RetryPolicy.default
         )
 
-        await #expect(throws: JevError.unauthorized) {
-            try await transport.send(request: dummyRequest, apiKey: "bad-key", endpoint: endpoint)
+        let matchesExpectedError: Bool
+        do {
+            _ = try await transport.send(request: dummyRequest, apiKey: "bad-key", endpoint: endpoint)
+            matchesExpectedError = false
+        } catch let error as JevError {
+            matchesExpectedError = (error == JevError.apiError(statusCode: 401, message: "Invalid API key"))
+        } catch {
+            matchesExpectedError = false
         }
+        #expect(matchesExpectedError)
 
         #expect(MockHTTPProtocol.requestCount == 1)
     }
@@ -196,9 +210,16 @@ struct URLSessionTransportTests {
             retryPolicy: RetryPolicy.default
         )
 
-        await #expect(throws: JevError.invalidRequest(body: "State token count exceeded")) {
-            try await transport.send(request: dummyRequest, apiKey: "key", endpoint: endpoint)
+        let matchesExpectedError: Bool
+        do {
+            _ = try await transport.send(request: dummyRequest, apiKey: "key", endpoint: endpoint)
+            matchesExpectedError = false
+        } catch let error as JevError {
+            matchesExpectedError = (error == JevError.apiError(statusCode: 422, message: "State token count exceeded"))
+        } catch {
+            matchesExpectedError = false
         }
+        #expect(matchesExpectedError)
 
         #expect(MockHTTPProtocol.requestCount == 1)
     }

@@ -397,7 +397,7 @@ public struct FileOrganizer: Sendable {
         }
 
         let domainProb = response.probabilities["domain"]?[finalDecision.domain.rawValue]
-        let sensitiveProb = file.isLocallySensitive ? 1.0 : (response.probability(for: "isSensitive")?.value ?? 0.0)
+        let sensitiveProb = file.isLocallySensitive ? 1.0 : (response.probability(for: "isSensitive") ?? 0.0)
 
         let destination = Self.resolveDestinationPath(
             for: file,

@@ -91,7 +91,7 @@ func printDemoResults(
 
     // 2. Boolean Noul Routing with Undecided Band
     let urgentJudgement = response.judgement(for: "isUrgent", policy: policy)
-    let probStr = response.probability(for: "isUrgent").map { formatPercentage($0.value) } ?? "n/a"
+    let probStr = response.probability(for: "isUrgent").map(formatPercentage) ?? "n/a"
     switch urgentJudgement.decision {
     case .auto:
         if urgentJudgement.answer == true {

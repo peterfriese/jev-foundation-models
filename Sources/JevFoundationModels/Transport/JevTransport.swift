@@ -87,11 +87,11 @@ public struct URLSessionTransport: JevTransport, Hashable, Sendable {
             } catch let urlError as URLError where urlError.code == .cancelled {
                 throw CancellationError()
             } catch {
-                throw JevError.transport(error.localizedDescription)
+                throw JevError.networkError(error.localizedDescription)
             }
 
             guard let httpResponse = response as? HTTPURLResponse else {
-                throw JevError.transport("Invalid HTTP response received from server.")
+                throw JevError.networkError("Invalid HTTP response received from server.")
             }
 
             if (200...299).contains(httpResponse.statusCode) {
@@ -121,18 +121,11 @@ public struct URLSessionTransport: JevTransport, Hashable, Sendable {
 
     private func failure(for response: HTTPURLResponse, data: Data) -> JevError {
         let body = String(data: data, encoding: .utf8) ?? "Unknown server error"
-        switch response.statusCode {
-        case 401:
-            return .unauthorized
-        case 422:
-            return .invalidRequest(body: body)
-        case 429:
-            return .rateLimited(retryAfter: retryPolicy.retryAfter(from: response, now: now()))
-        case 529:
-            return .overloaded
-        default:
-            return .apiError(statusCode: response.statusCode, message: body)
+        if response.statusCode == 429,
+           let retryAfter = retryPolicy.retryAfter(from: response, now: now()) {
+            return .apiError(statusCode: response.statusCode, message: "\(body) (retry after \(retryAfter))")
         }
+        return .apiError(statusCode: response.statusCode, message: body)
     }
 }
 

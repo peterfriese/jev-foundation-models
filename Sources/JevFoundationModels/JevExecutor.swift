@@ -75,7 +75,7 @@ public final class JevExecutor: LanguageModelExecutor, Sendable {
         if let confidenceJSON = synthesizer.extractConfidenceJSON(from: jevResponse.answers) {
             metadata["confidence"] = (try? GeneratedContent(json: confidenceJSON)) ?? GeneratedContent(confidenceJSON)
         }
-        if let scoresJSON = synthesizer.extractScoresJSON(from: jevResponse.answers) {
+        if let scoresJSON = synthesizer.extractScoresJSON(from: jevResponse.answers, layout: translation.layout) {
             metadata["scores"] = (try? GeneratedContent(json: scoresJSON)) ?? GeneratedContent(scoresJSON)
         }
 

@@ -92,6 +92,40 @@ struct ValuesAndRoutingTests {
         #expect(decoded.probabilities[2] == 0.70)
     }
 
+    @Test("ScoreValue telemetry remaps zero-based score indices into integer rubric ranges")
+    func testScoreValueTelemetryForNonZeroBasedIntegerRange() throws {
+        let synthesizer = ResponseSynthesizer()
+        let layout = SchemaRootLayout.object(
+            properties: [
+                "priority": SchemaPropertyDescriptor(
+                    name: "priority",
+                    questionKey: "priority",
+                    kind: .score(minimum: 1, maximum: 5, isInteger: true),
+                    instructions: "Priority"
+                )
+            ],
+            propertyOrder: ["priority"]
+        )
+        let answers = [
+            "priority": JevAnswer(
+                type: "score",
+                score: 2.0,
+                confidence: 0.9,
+                probabilities: ["0": 0.05, "1": 0.10, "2": 0.70, "3": 0.10, "4": 0.05],
+                legend: ["0": "P1", "1": "P2", "2": "P3", "3": "P4", "4": "P5"]
+            )
+        ]
+
+        let json = try #require(synthesizer.extractScoresJSON(from: answers, layout: layout))
+        let decoded = try JSONDecoder().decode([String: ScoreValue].self, from: Data(json.utf8))
+        let score = try #require(decoded["priority"])
+
+        #expect(score.value == 3.0)
+        #expect(score.rounded == 3)
+        #expect(score.legend[3] == "P3")
+        #expect(score.probabilities[3] == 0.70)
+    }
+
     // MARK: - RoutingPolicy: Choice & Score Tests
 
     @Test("RoutingPolicy maps confidence to decisions at calibrated thresholds")
@@ -165,24 +199,16 @@ struct ValuesAndRoutingTests {
 
     // MARK: - Enriched JevError Taxonomy Tests
 
-    @Test("Enriched JevError cases provide descriptive diagnostics and conform to Equatable")
-    func testEnrichedJevError() {
-        let err401 = JevError.unauthorized
+    @Test("JevError remains Equatable and preserves HTTP diagnostics")
+    func testJevErrorDiagnostics() {
+        let err401 = JevError.apiError(statusCode: 401, message: "Invalid API key")
         #expect(err401.localizedDescription.contains("401"))
+        #expect(err401 == JevError.apiError(statusCode: 401, message: "Invalid API key"))
 
-        let err422 = JevError.invalidRequest(body: "context length exceeded")
-        #expect(err422 == JevError.invalidRequest(body: "context length exceeded"))
-        #expect(err422 != JevError.invalidRequest(body: "other error"))
+        let err429 = JevError.apiError(statusCode: 429, message: "Rate limited (retry after 5 seconds)")
+        #expect(err429.localizedDescription.contains("429"))
 
-        let err429 = JevError.rateLimited(retryAfter: .seconds(5))
-        #expect(err429 == JevError.rateLimited(retryAfter: .seconds(5)))
-        #expect(err429.localizedDescription.contains("retry after"))
-
-        let err529 = JevError.overloaded
-        #expect(err529 == JevError.overloaded)
-        #expect(err529.localizedDescription.contains("529"))
-
-        let errMismatch = JevError.answerTypeMismatch(question: "urgency", expected: "noul", actual: "choice")
-        #expect(errMismatch.localizedDescription.contains("urgency"))
+        let networkError = JevError.networkError("connection lost")
+        #expect(networkError.localizedDescription.contains("Network error"))
     }
 }

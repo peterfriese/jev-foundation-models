@@ -35,7 +35,7 @@ do {
 } catch let urlError as URLError where urlError.code == .cancelled {
     throw CancellationError()
 } catch {
-    throw JevError.transport(error.localizedDescription)
+    throw JevError.networkError(error.localizedDescription)
 }
 ```
 During backoff delays, `try await sleep(delay)` propagates `CancellationError` directly without catching or retrying.
@@ -96,7 +96,7 @@ await channel.send(.response(entryID: entryID, action: .updateMetadata([
     "scores": GeneratedContent(scoresJSON)
 ])))
 ```
-These are accessed idiomatically via `response.probability(for:)`, `response.scoreValue(for:)`, `response.decision(for:)`, and `response.judgement(for:)`.
+These are accessed idiomatically via `response.probability(for:)`, `response.typedProbability(for:)`, `response.scoreValue(for:)`, `response.decision(for:)`, and `response.judgement(for:)`.
 
 ---
 

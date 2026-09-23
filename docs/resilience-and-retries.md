@@ -71,15 +71,8 @@ All failures outside of cooperative cancellation throw strongly typed `JevError`
 
 | `JevError` Case | HTTP Status / Trigger | Retried? | Diagnostic Description |
 | :--- | :---: | :---: | :--- |
-| `.unauthorized` | **401** | ❌ No | Missing or invalid `TYPESAFE_API_KEY`. |
-| `.invalidRequest(body:)` | **422** | ❌ No | Request failed server validation (e.g. state exceeds token context limit). |
-| `.rateLimited(retryAfter:)` | **429** | ✅ Yes | Rate limited; thrown only after `maxAttempts` exhausted. |
-| `.overloaded` | **529** | ✅ Yes | Engine overloaded; thrown only after `maxAttempts` exhausted. |
-| `.apiError(statusCode:message:)` | **Other** | Configurable | Other unhandled HTTP errors (e.g., 500, 502). |
-| `.transport(String)` | Network | ❌ No | URLSession connection drop or DNS failure (excluding cancellation). |
+| `.apiError(statusCode:message:)` | **401, 422, 429, 529, other HTTP errors** | Configurable | Preserves the original status code and server body, including rate-limit `Retry-After` details after retries are exhausted. |
+| `.networkError(String)` | Network | ❌ No | URLSession connection drop, invalid HTTP response, or DNS failure (excluding cancellation). |
 | `.structuredOutputRequired` | Client | ❌ No | Request called without a `@Generable` schema. |
 | `.invalidSchema(String)` | Client | ❌ No | Schema contains unconstrained `String` or unsupported types. |
-| `.missingAnswer(question:)` | Mapping | ❌ No | Server response omitted an answer for a requested question. |
-| `.answerTypeMismatch(...)` | Mapping | ❌ No | Question expected one primitive (e.g. noul) but received another (e.g. choice). |
-| `.unrecognizedChoice(...)` | Mapping | ❌ No | Categorical selection chose a string not in the Swift enum cases. |
 | `.decodingError(String)` | Client | ❌ No | JSON serialization or schema decoding failure. |
