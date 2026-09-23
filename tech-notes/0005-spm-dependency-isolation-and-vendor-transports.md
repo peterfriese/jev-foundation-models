@@ -11,7 +11,7 @@
 
 As `JevFoundationModels` introduced support for hardware-attested transports (such as `FirebaseAppCheckTransport`), an architectural question emerged:
 
-> *Since `FirebaseAppCheckTransport` provides a flexible, production-ready implementation supporting both cached and single-use tokens, should it be migrated from `Examples/` directly into the core `Sources/JevFoundationModels` library?*
+> *Since `FirebaseAppCheckTransport` provides a flexible, production-ready implementation supporting both cached and single-use tokens, should it be migrated from `Integrations/` directly into the core `Sources/JevFoundationModels` library?*
 
 A frequent assumption is that wrapping the transport in `#if canImport(FirebaseAppCheck)` would allow it to reside within the core package, compiling only for application targets that link the Firebase SDK.
 
@@ -53,7 +53,7 @@ Hardware attestation and replay protection features (such as Firebase limited-us
 1. **Keep Vendor Transports Decoupled:**
    Vendor-specific transports (Firebase App Check, Cloudflare Turnstile, AWS Cognito, etc.) must remain outside the core `Package.swift` dependency tree.
 2. **Drop-In Reference Pattern:**
-   The `Examples/` directory serves as the official distribution channel for reference transports. Developers copy the single Swift file directly into their app target where their vendor SDK is already linked.
+   The `Integrations/` directory serves as the official distribution channel for reference transports and proxy infrastructure. Developers copy the single Swift file directly into their app target where their vendor SDK is already linked.
 3. **Future Extensibility (Post-1.0 Companion Repositories):**
    If community demand for pre-packaged vendor transports grows, they should be released as dedicated companion repositories (e.g., `jev-foundation-models-firebase`) that depend on both `jev-foundation-models` and the respective vendor SDK, keeping the primary repository completely pure.
 

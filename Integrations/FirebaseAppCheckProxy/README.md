@@ -1,4 +1,4 @@
-# Firebase App Check Proxy Example
+# Firebase App Check Integration & Proxy
 
 This directory contains a ready-to-deploy reference implementation of a **Firebase Cloud Function (2nd Gen) reverse proxy** and a client-side **`FirebaseAppCheckTransport`** for Apple platforms.
 
@@ -7,7 +7,7 @@ This directory contains a ready-to-deploy reference implementation of a **Fireba
 ## Directory Structure
 
 ```
-FirebaseAppCheckProxy/
+Integrations/FirebaseAppCheckProxy/
 ├── README.md                          # Quick start instructions
 ├── FirebaseAppCheckTransport.swift     # Swift transport conforming to JevTransport
 └── functions/                         # Firebase Cloud Functions v2 project

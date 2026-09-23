@@ -133,8 +133,54 @@ if let probabilities = response.metadata["probabilities"] {
 
 For more in-depth documentation, see:
 * [Architecture Guide](docs/architecture.md)
+* [Mobile Security Guide](docs/mobile-security.md)
 * [Type Mapping Guide](docs/mapping-guide.md)
 * [Tech Notes](tech-notes/README.md)
+
+---
+
+## 🛡️ Production Mobile Security: Apple App Attest & Firebase App Check
+
+Because `TYPESAFE_API_KEY` cannot be embedded inside client-side iOS or visionOS apps, this repository provides a complete, production-ready reference architecture in [`Integrations/FirebaseAppCheckProxy`](Integrations/FirebaseAppCheckProxy):
+
+```
+┌─────────────────────────────────┐
+│     Client App (iOS 27+)        │
+│  • Apple App Attest / Enclave   │
+│  • FirebaseAppCheckTransport    │
+└────────────────┬────────────────┘
+                 │ POST /systemone (Header: X-Firebase-AppCheck)
+                 ▼
+┌─────────────────────────────────┐
+│  Cloud Function (2nd Gen Proxy) │
+│  • Token Verification           │
+│  • Replay Protection (Optional) │
+│  • Injects TYPESAFE_API_KEY     │
+└────────────────┬────────────────┘
+                 │ POST https://api.typesafe.ai/v1/systemone
+                 ▼
+┌─────────────────────────────────┐
+│        TypeSafe AI (Jev)        │
+└─────────────────────────────────┘
+```
+
+- **Hardware-Attested Client Transport**: A drop-in Swift transport (`FirebaseAppCheckTransport.swift`) bridging the `FirebaseAppCheck` SDK to `JevTransport` with support for both:
+  - `.cached` (default): In-memory token lookup with `< 1 ms` overhead, designed for interactive UI and continuous decision loops.
+  - `.singleUse`: One-time consumable tokens with server-side replay protection for sensitive actions.
+- **Serverless Reverse Proxy**: A ready-to-deploy Firebase Cloud Function (2nd Gen) that validates App Check tokens, guards against replayed requests, injects the API key from Google Secret Manager, and forwards evaluations with a 15-second timeout.
+- **Keeps Core Library Pure**: Distributed as an unbundled recipe so `JevFoundationModels` retains its zero-dependency guarantee, avoiding pulling hundreds of megabytes of Firebase dependencies into projects that don't need them.
+
+For complete setup and deployment instructions, see the **[Mobile Security Guide](docs/mobile-security.md)** and **[Integrations/FirebaseAppCheckProxy](Integrations/FirebaseAppCheckProxy/README.md)**.
+
+---
+
+## 🤖 Agent Skill
+
+If you are using AI coding agents (Claude Code, OpenCode, Cursor, Windsurf, etc.), install the companion agent skill to equip your agent with the `@Generable` schema mapping rules, probability telemetry extensions, custom transport patterns, and offline test harnesses:
+
+```bash
+npx skills add peterfriese/jev-foundation-models
+```
 
 ---
 
