@@ -68,16 +68,16 @@ for target in project.targets {
 
 - **Enabling via Xcode UI**: In Project Navigator $\to$ select Project $\to$ File Inspector $\to$ under **Project Document**, set **Project Format** to **JSON**.
 - **CLI Inspection**: Can be formatted, linted, and inspected with standard JSON tools (`jq`, `plutil -lint`, `python3 -m json.tool`).
-- **Backward Compatibility**: Xcode 27 supports both `.pbxproj` and `.xcproj`. Teams can convert existing projects on a per-project basis.
+- **Transitional Compatibility**: Xcode 27.2 introduces `.xcproj` as the default JSON configuration format, while Xcode 27.0 and 27.1 environments continue to use `.pbxproj`. For maximum compatibility across mixed developer toolchains, sample projects can maintain checked-in `.pbxproj` bundles that upgrade seamlessly to `.xcproj` when opened in Xcode 27.2+.
 
 ---
 
 ## Implications for Sample Mobile Applications
 
-1. **Standardize on JSON for UI Samples**:
-   All new mobile UI sample applications in `Examples/` (e.g., `DietaryScanner`, `ExpenseScanner`, `ToneRadar`) should use the modern JSON format.
+1. **JSON-First Project Definitions**:
+   Mobile sample applications in `Examples/` (e.g., `NutritionLabelScannerApp`) adopt JSON-first representations, moving toward full `.xcproj` adoption as development environments standardize on Xcode 27.2+.
 2. **Simplified Toolchain**:
-   We no longer need heavy Ruby gems or complex YAML abstractions to generate or update Xcode projects. AI agents can directly emit clean `project.xcproj` JSON structures or lightweight `project.json` manifests.
+   We no longer need heavy Ruby gems or complex YAML abstractions to generate or update Xcode projects. AI agents can directly emit clean `project.xcproj` JSON structures or lightweight JSON manifests.
 3. **FlowDeck Integration**:
    `flowdeck build`, `flowdeck test`, and `flowdeck run` seamlessly recognize `.xcodeproj` bundles containing `project.xcproj`.
 4. **CI & Diff Cleanliness**:

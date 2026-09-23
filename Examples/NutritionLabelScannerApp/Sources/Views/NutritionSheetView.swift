@@ -128,6 +128,7 @@ public struct NutritionSheetView: View {
                         .foregroundStyle(Color.secondary.opacity(0.8))
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Close")
             }
         }
     }

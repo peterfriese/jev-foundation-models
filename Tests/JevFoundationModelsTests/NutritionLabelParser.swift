@@ -1,0 +1,1 @@
+../../Examples/NutritionLabelScannerApp/Sources/Services/NutritionLabelParser.swift

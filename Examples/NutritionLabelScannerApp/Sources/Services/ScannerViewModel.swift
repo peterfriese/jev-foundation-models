@@ -73,10 +73,9 @@ public final class ScannerViewModel {
                 self.selectedProduct = realProduct
                 self.scanStatus = "Verified: \(realProduct.brand)"
                 self.onScanCompleted?()
-                self.triggerEvaluation()
             } else {
                 let unresolved = FoodProduct(
-                    id: barcode,
+                    id: "unlisted-\(barcode)",
                     brand: "Unlisted Barcode",
                     name: "Barcode \(barcode)",
                     packageCategory: "Product",
@@ -97,6 +96,9 @@ public final class ScannerViewModel {
                         proteinGrams: 0
                     )
                 )
+                self.decision = nil
+                self.isSafeProbability = nil
+                self.confidence = nil
                 self.selectedProduct = unresolved
                 self.scanStatus = "Barcode Found — Scan Label"
                 self.isEvaluating = false
@@ -124,7 +126,6 @@ public final class ScannerViewModel {
 
         self.selectedProduct = ocrProduct
         self.onScanCompleted?()
-        self.triggerEvaluation()
     }
 
     private func loadSelectedPhoto() {
@@ -151,7 +152,8 @@ public final class ScannerViewModel {
         let productToEval = selectedProduct
         let profileToEval = selectedProfile
 
-        guard productToEval.id != "waiting" else { return }
+        // Don't evaluate empty waiting placeholder or unresolved barcode prompts
+        guard productToEval.id != "waiting" && !productToEval.id.hasPrefix("unlisted-") else { return }
 
         isEvaluating = true
         errorMessage = nil
@@ -183,8 +185,11 @@ public final class ScannerViewModel {
                     }
                 }
             } catch {
-                self.errorMessage = error.localizedDescription
-                self.isEvaluating = false
+                if self.selectedProduct.id == productToEval.id && self.selectedProfile.id == profileToEval.id {
+                    self.errorMessage = error.localizedDescription
+                    self.scanStatus = "Evaluation Error: \(error.localizedDescription)"
+                    self.isEvaluating = false
+                }
             }
         }
     }

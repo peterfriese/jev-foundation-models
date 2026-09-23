@@ -22,16 +22,16 @@ FirebaseAppCheckProxy/
 ## Deployment Instructions
 
 ### 1. Configure Secret & Deploy Function
-In `functions/`:
+From `Examples/FirebaseAppCheckProxy/`:
 
 ```bash
-cd functions
-npm install
+# Install dependencies
+npm --prefix functions install
 
 # Set your TypeSafe API key securely
 firebase functions:secrets:set TYPESAFE_API_KEY
 
-# Deploy to Firebase
+# Deploy to Firebase using root firebase.json
 firebase deploy --only functions
 ```
 

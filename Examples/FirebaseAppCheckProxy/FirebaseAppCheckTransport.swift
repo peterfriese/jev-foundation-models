@@ -53,11 +53,13 @@ public struct FirebaseAppCheckTransport: JevTransport, Sendable {
             tokenString = token.token
         }
         #else
-        let tokenString = ""
+        throw JevError.networkError("FirebaseAppCheck is not linked in this target. To use FirebaseAppCheckTransport, link the FirebaseAppCheck SDK.")
         #endif
 
         // 2. Prepare HTTP request to the Cloud Function proxy
-        let targetURL = proxyEndpoint ?? endpoint
+        guard let targetURL = proxyEndpoint ?? (endpoint.host?.contains("typesafe.ai") == false ? endpoint : nil) else {
+            throw JevError.networkError("FirebaseAppCheckTransport requires an explicit proxyEndpoint pointing to your authenticated Cloud Function proxy.")
+        }
         var urlRequest = URLRequest(url: targetURL)
         urlRequest.httpMethod = "POST"
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")

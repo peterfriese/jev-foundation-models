@@ -1,0 +1,1 @@
+../../Examples/NutritionLabelScannerApp/Sources/Models/FoodProduct.swift

@@ -139,28 +139,20 @@ public struct CameraViewfinderView: View {
                         .foregroundStyle(decision.isSafe ? .green : .red)
                     Text(viewModel.selectedProduct.name)
                         .font(.subheadline.bold())
-                        .foregroundStyle(.white)
                         .lineLimit(1)
                 } else {
                     Image(systemName: "chart.bar.doc.horizontal.fill")
                         .foregroundStyle(.cyan)
                     Text("View Nutrition Sheet")
                         .font(.subheadline.bold())
-                        .foregroundStyle(.white)
                 }
                 Image(systemName: "chevron.up")
                     .font(.caption2.bold())
-                    .foregroundStyle(.white.opacity(0.7))
             }
-            .padding(.horizontal, 18)
-            .padding(.vertical, 12)
-            .background(.ultraThinMaterial, in: Capsule())
-            .overlay(
-                Capsule()
-                    .stroke(Color.white.opacity(0.25), lineWidth: 1)
-            )
-            .shadow(color: .black.opacity(0.35), radius: 10, y: 5)
         }
+        .buttonStyle(.glass)
+        .buttonBorderShape(.capsule)
+        .accessibilityLabel(viewModel.selectedProduct.id != "waiting" ? "View nutrition and safety report for \(viewModel.selectedProduct.name)" : "Open nutrition and safety sheet")
     }
 
     // MARK: - Top Control Bar (Flashlight + Photos Picker + Diet Selector)
@@ -173,21 +165,23 @@ public struct CameraViewfinderView: View {
                 impact.impactOccurred()
                 viewModel.toggleFlashlight()
             } label: {
-                Image(systemName: viewModel.cameraService.isTorchOn ? "flashlight.on.circle.fill" : "flashlight.off.circle.fill")
-                    .font(.title2)
-                    .foregroundStyle(viewModel.cameraService.isTorchOn ? .yellow : .white)
-                    .frame(width: 44, height: 44)
-                    .background(.ultraThinMaterial, in: Circle())
+                Image(systemName: viewModel.cameraService.isTorchOn ? "flashlight.on.fill" : "flashlight.off.fill")
+                    .font(.body)
+                    .foregroundStyle(viewModel.cameraService.isTorchOn ? .yellow : .primary)
             }
+            .buttonStyle(.glass)
+            .buttonBorderShape(.circle)
+            .accessibilityLabel(viewModel.cameraService.isTorchOn ? "Turn flashlight off" : "Turn flashlight on")
 
             // Photos Library Scan Picker (Scan any nutrition label photo)
             PhotosPicker(selection: $viewModel.selectedPhotoItem, matching: .images) {
                 Image(systemName: "photo.on.rectangle.angled")
-                    .font(.subheadline)
-                    .foregroundStyle(.white)
-                    .frame(width: 44, height: 44)
-                    .background(.ultraThinMaterial, in: Circle())
+                    .font(.body)
+                    .foregroundStyle(.primary)
             }
+            .buttonStyle(.glass)
+            .buttonBorderShape(.circle)
+            .accessibilityLabel("Import photo of nutrition label from library")
 
             Spacer()
 
@@ -200,25 +194,20 @@ public struct CameraViewfinderView: View {
                     }
                 }
             } label: {
-                HStack(spacing: 8) {
+                HStack(spacing: 6) {
                     Image(systemName: viewModel.selectedProfile.icon)
                         .font(.subheadline.bold())
                         .foregroundStyle(.cyan)
                     Text(viewModel.selectedProfile.shortName)
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.white)
                     Image(systemName: "chevron.up.chevron.down")
                         .font(.caption2.bold())
-                        .foregroundStyle(.white.opacity(0.7))
+                        .foregroundStyle(.secondary)
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 9)
-                .background(.ultraThinMaterial, in: Capsule())
-                .overlay(
-                    Capsule()
-                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                )
             }
+            .buttonStyle(.glass)
+            .buttonBorderShape(.capsule)
+            .accessibilityLabel("Select dietary safety profile, currently \(viewModel.selectedProfile.title)")
         }
     }
 

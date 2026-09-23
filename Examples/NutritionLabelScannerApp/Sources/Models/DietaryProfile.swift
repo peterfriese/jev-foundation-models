@@ -61,7 +61,7 @@ extension DietaryProfile {
         shortName: "Diabetic",
         icon: "heart.text.square.fill",
         restrictionsDescription: "Added sugars must be <= 3g per serving. Minimize fast-acting sweeteners (corn syrup, sucrose, dextrose).",
-        promptGuidance: "User manages diabetes/insulin sensitivity. Flag products with high added sugars (>4g), high-fructose corn syrup, or dextrose."
+        promptGuidance: "User manages diabetes/insulin sensitivity. Flag products with added sugars exceeding 3g per serving, high-fructose corn syrup, or dextrose."
     )
 
     public static let cleanWholeFood = DietaryProfile(

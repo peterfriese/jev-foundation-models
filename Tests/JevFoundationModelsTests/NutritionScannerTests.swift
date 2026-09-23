@@ -225,10 +225,10 @@ struct NutritionScannerTests {
         #expect(cleanResponse.content.primaryFlag == .seedOils)
     }
 
-    // MARK: - OCR Nutrition Label Parsing Heuristics
+    // MARK: - Production OCR Nutrition Label Parser Tests
 
-    @Test("Nutrition OCR parser extracts calories, carbs, fat, added sugars and protein from label text")
-    func testOCRLabelParsing() throws {
+    @Test("NutritionLabelParser parses FDA nutrition label, detects markers and extracts ingredients")
+    func testFDAOCRLabelParsing() throws {
         let rawOCRText = """
         Nutrition Facts
         Serving Size 2 bars (42g)
@@ -245,30 +245,28 @@ struct NutritionScannerTests {
         CONTAINS: Soy ingredients.
         """
 
-        let lower = rawOCRText.lowercased()
+        // 1. Production marker check
+        #expect(NutritionLabelParser.isNutritionLabelOrIngredients(rawOCRText) == true)
 
-        // 1. Label detection
-        let markers = ["nutrition facts", "calories", "total fat", "protein"]
-        let markerCount = markers.filter { lower.contains($0) }.count
-        #expect(markerCount >= 3)
+        // 2. Production facts extraction
+        let facts = NutritionLabelParser.parseNutritionFacts(from: rawOCRText)
+        #expect(facts.calories == 190)
+        #expect(facts.totalFatGrams == 7.0)
+        #expect(facts.saturatedFatGrams == 1.0)
+        #expect(facts.sodiumMilligrams == 140)
+        #expect(facts.totalCarbGrams == 29.0)
+        #expect(facts.dietaryFiberGrams == 2.0)
+        #expect(facts.totalSugarGrams == 12.0)
+        #expect(facts.addedSugarGrams == 11.0)
+        #expect(facts.proteinGrams == 3.0)
 
-        // 2. Calories
-        let caloriesRegex = try NSRegularExpression(pattern: #"calories\s*(\d+)"#, options: [.caseInsensitive])
-        let nsText = lower as NSString
-        let calMatch = caloriesRegex.firstMatch(in: lower, options: [], range: NSRange(location: 0, length: nsText.length))
-        #expect(calMatch != nil)
-        let calories = Int(nsText.substring(with: calMatch!.range(at: 1)))
-        #expect(calories == 190)
-
-        // 3. Added Sugars
-        let addedSugarRegex = try NSRegularExpression(pattern: #"(\d+)\s*g?\s*added sugars"#, options: [.caseInsensitive])
-        let sugarMatch = addedSugarRegex.firstMatch(in: lower, options: [], range: NSRange(location: 0, length: nsText.length))
-        #expect(sugarMatch != nil)
-        let addedSugars = Double(nsText.substring(with: sugarMatch!.range(at: 1)))
-        #expect(addedSugars == 11.0)
+        // 3. Production ingredients & allergen extraction
+        let (ingredients, warning) = NutritionLabelParser.extractIngredientsAndAllergens(from: rawOCRText)
+        #expect(ingredients.contains("Whole Grain Oats"))
+        #expect(warning?.contains("Soy") == true)
     }
 
-    @Test("Multilingual OCR parser extracts German Nährwerte with comma decimals and converts Salz to Sodium")
+    @Test("NutritionLabelParser parses German REWE Bio Rote Linsen packaging with Salz conversion")
     func testGermanNährwerteOCR() throws {
         // Real packaging text from REWE Bio Rote Linsen
         let germanLentilsText = """
@@ -284,40 +282,23 @@ struct NutritionScannerTests {
         Zutaten: Rote Linsen aus kontrolliert biologischem Anbau.
         """
 
-        let lower = germanLentilsText.lowercased()
+        #expect(NutritionLabelParser.isNutritionLabelOrIngredients(germanLentilsText) == true)
 
-        // 1. Detection of German markers
-        let germanMarkers = ["durchschnittliche nährwerte", "energie", "fett", "kohlenhydrate", "eiweiß", "salz", "zutaten"]
-        let foundCount = germanMarkers.filter { lower.contains($0) }.count
-        #expect(foundCount >= 5)
+        let facts = NutritionLabelParser.parseNutritionFacts(from: germanLentilsText)
+        #expect(facts.calories == 341)
+        #expect(facts.totalFatGrams == 1.5)
+        #expect(facts.saturatedFatGrams == 0.3)
+        #expect(facts.totalCarbGrams == 50.0)
+        #expect(facts.totalSugarGrams == 1.1)
+        #expect(facts.dietaryFiberGrams == 13.0)
+        #expect(facts.proteinGrams == 26.0)
+        #expect(facts.sodiumMilligrams == 4) // 0.01g salt * 400 = 4mg sodium
 
-        // 2. Calories extraction from "1439 kJ / 341 kcal"
-        let kcalRegex = try NSRegularExpression(pattern: #"(?:/\s*)?(\d+)\s*kcal"#, options: [.caseInsensitive])
-        let nsText = lower as NSString
-        let kcalMatch = kcalRegex.firstMatch(in: lower, options: [], range: NSRange(location: 0, length: nsText.length))
-        #expect(kcalMatch != nil)
-        let calories = Int(nsText.substring(with: kcalMatch!.range(at: 1)))
-        #expect(calories == 341)
-
-        // 3. Comma decimal extraction for Fat (1,5 g -> 1.5)
-        let fatRegex = try NSRegularExpression(pattern: #"(?<!gesättigte[n\s])fett[\s:]*[<>]?\s*([\d,\.]+)"#, options: [.caseInsensitive])
-        let fatMatch = fatRegex.firstMatch(in: lower, options: [], range: NSRange(location: 0, length: nsText.length))
-        #expect(fatMatch != nil)
-        let rawFat = nsText.substring(with: fatMatch!.range(at: 1)).replacingOccurrences(of: ",", with: ".")
-        let fat = Double(rawFat)
-        #expect(fat == 1.5)
-
-        // 4. Salz conversion to Sodium (< 0,01 g Salz -> 4 mg Sodium)
-        let saltRegex = try NSRegularExpression(pattern: #"salz[\s:]*[<>]?\s*([\d,\.]+)\s*g"#, options: [.caseInsensitive])
-        let saltMatch = saltRegex.firstMatch(in: lower, options: [], range: NSRange(location: 0, length: nsText.length))
-        #expect(saltMatch != nil)
-        let rawSalt = nsText.substring(with: saltMatch!.range(at: 1)).replacingOccurrences(of: ",", with: ".")
-        let saltGrams = Double(rawSalt)!
-        let sodiumMg = Int(saltGrams * 400.0)
-        #expect(sodiumMg == 4)
+        let (ingredients, _) = NutritionLabelParser.extractIngredientsAndAllergens(from: germanLentilsText)
+        #expect(ingredients.contains("Rote Linsen"))
     }
 
-    @Test("Multilingual OCR parser extracts German Canned Tomatoes with < 0,5 g values")
+    @Test("NutritionLabelParser parses European Canned Tomatoes with less-than signs and salt")
     func testGermanCannedTomatoesOCR() throws {
         // Real packaging text from Italian/German canned tomatoes
         let tomatoText = """
@@ -333,35 +314,23 @@ struct NutritionScannerTests {
         Zutaten: Tomaten, Tomatensaft, Säuerungsmittel: Citronensäure.
         """
 
-        let lower = tomatoText.lowercased()
+        #expect(NutritionLabelParser.isNutritionLabelOrIngredients(tomatoText) == true)
 
-        // 1. Calories extraction (24 kcal)
-        let kcalRegex = try NSRegularExpression(pattern: #"(?:/\s*)?(\d+)\s*kcal"#, options: [.caseInsensitive])
-        let nsText = lower as NSString
-        let match = kcalRegex.firstMatch(in: lower, options: [], range: NSRange(location: 0, length: nsText.length))
-        #expect(match != nil)
-        let calories = Int(nsText.substring(with: match!.range(at: 1)))
-        #expect(calories == 24)
+        let facts = NutritionLabelParser.parseNutritionFacts(from: tomatoText)
+        #expect(facts.calories == 24)
+        #expect(facts.totalFatGrams == 0.5)
+        #expect(facts.saturatedFatGrams == 0.0)
+        #expect(facts.totalCarbGrams == 3.5)
+        #expect(facts.totalSugarGrams == 3.5)
+        #expect(facts.dietaryFiberGrams == 1.2)
+        #expect(facts.proteinGrams == 1.2)
+        #expect(facts.sodiumMilligrams == 100) // 0.25g salt * 400 = 100mg sodium
 
-        // 2. Fat with less-than sign (< 0,5 g -> 0.5)
-        let fatRegex = try NSRegularExpression(pattern: #"(?<!gesättigte[n\s])fett[\s:]*[<>]?\s*([\d,\.]+)"#, options: [.caseInsensitive])
-        let fatMatch = fatRegex.firstMatch(in: lower, options: [], range: NSRange(location: 0, length: nsText.length))
-        #expect(fatMatch != nil)
-        let rawFat = nsText.substring(with: fatMatch!.range(at: 1)).replacingOccurrences(of: ",", with: ".")
-        let fat = Double(rawFat)
-        #expect(fat == 0.5)
-
-        // 3. Salz to Sodium (0,25 g -> 100 mg Sodium)
-        let saltRegex = try NSRegularExpression(pattern: #"salz[\s:]*[<>]?\s*([\d,\.]+)\s*g"#, options: [.caseInsensitive])
-        let saltMatch = saltRegex.firstMatch(in: lower, options: [], range: NSRange(location: 0, length: nsText.length))
-        #expect(saltMatch != nil)
-        let rawSalt = nsText.substring(with: saltMatch!.range(at: 1)).replacingOccurrences(of: ",", with: ".")
-        let saltGrams = Double(rawSalt)!
-        let sodiumMg = Int(saltGrams * 400.0)
-        #expect(sodiumMg == 100)
+        let (ingredients, _) = NutritionLabelParser.extractIngredientsAndAllergens(from: tomatoText)
+        #expect(ingredients.contains("Tomaten"))
     }
 
-    @Test("Multilingual OCR parser extracts fragmented column OCR text from user screenshot")
+    @Test("NutritionLabelParser handles fragmented columnar OCR lines from live camera")
     func testFragmentedColumnOCRFromUserScreenshot() throws {
         let screenshotText = """
         Durchschnittliche
@@ -380,36 +349,14 @@ struct NutritionScannerTests {
         <0.01g
         """
 
-        let lower = screenshotText.lowercased()
+        #expect(NutritionLabelParser.isNutritionLabelOrIngredients(screenshotText) == true)
 
-        // 1. Detection of German markers including "weib", "kca", "durchschnittliche"
-        let isLabel = lower.contains("durchschnittliche") && lower.contains("nährwerte")
-        #expect(isLabel == true)
-
-        // 2. Parse Calories from "341 kca"
-        let kcalRegex = try NSRegularExpression(pattern: #"(\d+)\s*kca[l]?"#, options: [.caseInsensitive])
-        let nsText = lower as NSString
-        let kcalMatch = kcalRegex.firstMatch(in: lower, options: [], range: NSRange(location: 0, length: nsText.length))
-        #expect(kcalMatch != nil)
-        let calories = Int(nsText.substring(with: kcalMatch!.range(at: 1)))
-        #expect(calories == 341)
-
-        // 3. Sequential grams extraction: ["1.5", "50", "13", "26", "0.01"]
-        let gramRegex = try NSRegularExpression(pattern: #"[-–<>]?\s*([\d,\.]+)\s*g\b"#, options: [.caseInsensitive])
-        let matches = gramRegex.matches(in: lower, options: [], range: NSRange(location: 0, length: nsText.length))
-        var values = matches.compactMap { match -> Double? in
-            let raw = nsText.substring(with: match.range(at: 1)).replacingOccurrences(of: ",", with: ".")
-            return Double(raw)
-        }
-        // Drop the 100g serving size header
-        if values.first == 100.0 {
-            values.removeFirst()
-        }
-        #expect(values.count >= 5)
-        #expect(values[0] == 1.5) // Fat
-        #expect(values[1] == 50.0) // Carbs
-        #expect(values[2] == 13.0) // Fiber
-        #expect(values[3] == 26.0) // Protein
-        #expect(values[4] == 0.01) // Salt
+        let facts = NutritionLabelParser.parseNutritionFacts(from: screenshotText)
+        #expect(facts.calories == 341)
+        #expect(facts.totalFatGrams == 1.5)
+        #expect(facts.totalCarbGrams == 50.0)
+        #expect(facts.dietaryFiberGrams == 13.0)
+        #expect(facts.proteinGrams == 26.0)
+        #expect(facts.sodiumMilligrams == 4)
     }
 }
