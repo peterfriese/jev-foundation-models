@@ -65,11 +65,13 @@ public struct JevResponse: Codable, Sendable, Equatable {
     public let model: String
     public let answers: [String: JevAnswer]
     public let usage: JevUsage?
+    public var serverDurationMs: Double?
 
-    public init(model: String, answers: [String: JevAnswer], usage: JevUsage? = nil) {
+    public init(model: String, answers: [String: JevAnswer], usage: JevUsage? = nil, serverDurationMs: Double? = nil) {
         self.model = model
         self.answers = answers
         self.usage = usage
+        self.serverDurationMs = serverDurationMs
     }
 }
 

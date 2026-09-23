@@ -8,9 +8,11 @@ public protocol JevTransport: Sendable {
 
 /// The default HTTP transport using Apple's native `URLSession`.
 public struct URLSessionTransport: JevTransport, Hashable, Sendable {
+    public let session: URLSession
     public let timeoutInterval: TimeInterval
 
-    public init(timeoutInterval: TimeInterval = 30) {
+    public init(session: URLSession = .shared, timeoutInterval: TimeInterval = 30) {
+        self.session = session
         self.timeoutInterval = timeoutInterval
     }
 
@@ -26,10 +28,6 @@ public struct URLSessionTransport: JevTransport, Hashable, Sendable {
         } catch {
             throw JevError.decodingError("Failed to encode JevRequest: \(error.localizedDescription)")
         }
-
-        let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = timeoutInterval
-        let session = URLSession(configuration: config)
 
         let data: Data
         let response: URLResponse
@@ -49,7 +47,12 @@ public struct URLSessionTransport: JevTransport, Hashable, Sendable {
         }
 
         do {
-            return try JSONDecoder().decode(JevResponse.self, from: data)
+            var decoded = try JSONDecoder().decode(JevResponse.self, from: data)
+            if let serviceTimeHeader = httpResponse.value(forHTTPHeaderField: "x-envoy-upstream-service-time"),
+               let serviceTimeMs = Double(serviceTimeHeader) {
+                decoded.serverDurationMs = serviceTimeMs
+            }
+            return decoded
         } catch {
             throw JevError.decodingError("Failed to decode Jev response: \(error.localizedDescription)")
         }
