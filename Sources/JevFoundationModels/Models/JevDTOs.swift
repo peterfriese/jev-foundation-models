@@ -97,6 +97,7 @@ public struct JevAnswer: Codable, Sendable, Equatable {
     public let score: Double?
     public let confidence: Double?
     public let probabilities: [String: Double]?
+    public let legend: [String: String]?
 
     public init(
         type: String,
@@ -104,7 +105,8 @@ public struct JevAnswer: Codable, Sendable, Equatable {
         choice: String? = nil,
         score: Double? = nil,
         confidence: Double? = nil,
-        probabilities: [String: Double]? = nil
+        probabilities: [String: Double]? = nil,
+        legend: [String: String]? = nil
     ) {
         self.type = type
         self.noul = noul
@@ -112,5 +114,34 @@ public struct JevAnswer: Codable, Sendable, Equatable {
         self.score = score
         self.confidence = confidence
         self.probabilities = probabilities
+        self.legend = legend
+    }
+
+    /// Converts this answer into a typed `Probability` if it is a boolean (`noul`) answer.
+    public var probability: Probability? {
+        noul.flatMap(Probability.init(exactly:))
+    }
+
+    /// Converts this answer into a typed `ScoreValue` if it is a rubric `score` answer.
+    public var scoreValue: ScoreValue? {
+        guard let score else { return nil }
+        var indexedLegend: [Int: String] = [:]
+        if let legend {
+            for (k, v) in legend {
+                if let idx = Int(k) { indexedLegend[idx] = v }
+            }
+        }
+        var indexedProbs: [Int: Double] = [:]
+        if let probabilities {
+            for (k, v) in probabilities {
+                if let idx = Int(k) { indexedProbs[idx] = v }
+            }
+        }
+        return ScoreValue(
+            value: score,
+            legend: indexedLegend,
+            probabilities: indexedProbs,
+            confidence: confidence ?? 1.0
+        )
     }
 }

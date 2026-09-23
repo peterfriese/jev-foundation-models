@@ -81,8 +81,9 @@ enum Department {
 import FoundationModels
 import JevFoundationModels
 
-// 1. Create the model
-let jev = JevLanguageModel(apiKey: ProcessInfo.processInfo.environment["TYPESAFE_API_KEY"]!)
+// 1. Create the model with optional resilience policy
+let retryPolicy = RetryPolicy(maxAttempts: 3, initialDelay: .milliseconds(250), jitter: 0.15)
+let jev = JevLanguageModel(apiKey: ProcessInfo.processInfo.environment["TYPESAFE_API_KEY"]!, retryPolicy: retryPolicy)
 
 // 2. Initialize native Apple FoundationModels session
 let session = LanguageModelSession(model: jev)
@@ -97,9 +98,17 @@ print("Urgent: \(triage.isUrgent)")             // true
 print("Route: \(triage.department)")           // .billing
 print("Frustration: \(triage.frustration)")    // 2
 
-// 5. Access calibrated probabilities & confidence from metadata
-if let probabilities = response.metadata["probabilities"] {
-    print("Probabilities: \(probabilities)")
+// 5. Route decisions with calibrated confidence
+let policy = RoutingPolicy(escalateBelow: 0.60, autoAtOrAbove: 0.85)
+switch response.decision(for: "department", policy: policy) {
+case .auto:     print("Auto-routed to \(triage.department)")
+case .confirm:  print("Suggesting \(triage.department) for confirmation")
+case .escalate: print("Escalated to human supervisor")
+}
+
+let judgement = response.judgement(for: "isUrgent", policy: policy)
+if judgement.decision == .auto && judgement.answer == true {
+    print("Urgency: Decisive True -> Page on-call engineering P0")
 }
 ```
 
@@ -132,6 +141,8 @@ if let probabilities = response.metadata["probabilities"] {
 ```
 
 For more in-depth documentation, see:
+* [Confidence & Noul Routing Guide](docs/confidence-routing.md)
+* [HTTP Resilience & Retries Guide](docs/resilience-and-retries.md)
 * [Architecture Guide](docs/architecture.md)
 * [Mobile Security Guide](docs/mobile-security.md)
 * [Type Mapping Guide](docs/mapping-guide.md)
@@ -196,20 +207,23 @@ swift test
 
 ## 📱 Sample Applications
 
-### 1. Duplicate Article Detection (`duplicate-article-demo`)
+### 1. Duplicate Article Detection ([`duplicate-article-demo`](Examples/DuplicateArticleDemo/README.md))
 
 Demonstrates a two-layer deduplication system for read-it-later and knowledge-management apps:
 - **Layer 1 (Deterministic)**: Catches identical URLs and matching title/byline pairs instantly at 0ms and zero token cost.
-- **Layer 2 (Jev System One via Foundation Models)**: Catches rewritten wire stories and syndicated news (different URL, different headline, different byline) using calibrated probabilities and an escape hatch ("Save anyway").
+- **Layer 2 (Jev System One via Foundation Models)**: Evaluates rewritten wire stories and syndicated news (different URL, headline, byline) with calibrated probabilities.
+- **Confidence & Noul Routing**: Symmetrical decisiveness gating with the undecided band ($0.35\dots0.65$) and cooperative cancellation.
 
 ```bash
-# Run the 3-scenario deduplication walkthrough
+# Run the 4-scenario deduplication & cancellation walkthrough
 swift run duplicate-article-demo
 ```
 
-### 2. Ticket Triage (`ticket-triage-demo`)
+### 2. Ticket Triage ([`ticket-triage-demo`](Examples/TicketTriageDemo/README.md))
 
 Demonstrates multi-field `@Generable` evaluation with `Bool`, `enum`, and `@Guide(.range(...))` score:
+- **Resilient HTTP Transport**: `RetryPolicy` with exponential backoff, jitter, and RFC 9110 `Retry-After` adherence.
+- **Operational Confidence Routing**: Routes categorical choices (`.auto`, `.confirm`, `.escalate`), gates boolean urgency, and inspects rubric scores.
 
 ```bash
 # Run with default sample ticket
@@ -219,7 +233,7 @@ swift run ticket-triage-demo
 swift run ticket-triage-demo "Our server deployment failed with error 500."
 ```
 
-### 3. Smart Directory Organizer with Dynamic Profiles (`file-organizer-demo`)
+### 3. Smart Directory Organizer with Dynamic Profiles ([`file-organizer-demo`](Examples/FileOrganizerDemo/README.md))
 
 Demonstrates Apple Foundation Models **Dynamic Profiles** (`LanguageModelSession.DynamicProfile`), runtime state adaptation with `@SessionPropertyEntry`, turn isolation via `.historyTransform`, and multi-primitive Jev System One triage:
 - **Dynamic Profile Adaptation**: Switches between Semantic Domain and Actionable Workflow triaging by modifying session properties in-place without rebuilding the session.

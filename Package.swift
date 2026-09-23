@@ -36,17 +36,20 @@ let package = Package(
         .executableTarget(
             name: "TicketTriageDemo",
             dependencies: ["JevFoundationModels"],
-            path: "Examples/TicketTriageDemo"
+            path: "Examples/TicketTriageDemo",
+            exclude: ["README.md"]
         ),
         .executableTarget(
             name: "DuplicateArticleDemo",
             dependencies: ["JevFoundationModels"],
-            path: "Examples/DuplicateArticleDemo"
+            path: "Examples/DuplicateArticleDemo",
+            exclude: ["README.md"]
         ),
         .executableTarget(
             name: "FileOrganizerDemo",
             dependencies: ["JevFoundationModels"],
-            path: "Examples/FileOrganizerDemo"
+            path: "Examples/FileOrganizerDemo",
+            exclude: ["README.md"]
         ),
         .testTarget(
             name: "JevFoundationModelsTests",

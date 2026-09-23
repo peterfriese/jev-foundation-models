@@ -30,9 +30,10 @@ func resolveAPIKey() -> String? {
 /// Creates a simulated mock transport for offline demonstration when no live API key is configured.
 func createOfflineMockTransport() -> MockJevTransport {
     MockJevTransport { request in
-        // Determine whether incoming state matches the AP/KCBD wire story
+        // Determine whether incoming state matches the AP/KCBD wire story or Google competitor story
         let state = request.state.lowercased()
-        let isAPStoryDuplicate = state.contains("foldable version called duo") && state.contains("apple on wednesday unveiled")
+        let isGoogleCompetitor = state.contains("google announces pixel fold")
+        let isAPStoryDuplicate = !isGoogleCompetitor && state.contains("new iphone lineup includes a foldable version")
 
         let noulValue: Double = isAPStoryDuplicate ? 0.93 : 0.01
 
@@ -99,8 +100,9 @@ func printVerdictResult(verdict: DeduplicationVerdict, durationMs: Double) {
         switch match.reason {
         case .deterministic:
             print("   • Telemetry:   0 tokens consumed (Local deterministic check)")
-        case .semantic(let prob, let thresh):
-            print(String(format: "   • Calibration: Calibrated P(true) = %.2f ≥ %.2f threshold", prob, thresh))
+        case .semantic(let prob, let thresh, let judgement):
+            let actionStr = judgement.map { " — Decision: \($0.decision.rawValue.uppercased())" } ?? ""
+            print(String(format: "   • Calibration: Calibrated P(true) = %.2f ≥ %.2f threshold%@", prob, thresh, actionStr))
         }
 
         print("\n   [UI Action: Displaying Warning with Escape Hatch]")

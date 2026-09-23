@@ -96,6 +96,22 @@ public struct ResponseSynthesizer: Sendable {
         return json
     }
 
+    /// Extracts typed ScoreValue models from Jev answers into a JSON string.
+    public func extractScoresJSON(from answers: [String: JevAnswer]) -> String? {
+        var scores: [String: ScoreValue] = [:]
+        for (key, answer) in answers {
+            if let scoreVal = answer.scoreValue {
+                scores[key] = scoreVal
+            }
+        }
+        guard !scores.isEmpty,
+              let data = try? JSONEncoder().encode(scores),
+              let json = String(data: data, encoding: .utf8) else {
+            return nil
+        }
+        return json
+    }
+
     // MARK: - Internal Helpers
 
     private func buildObjectDictionary(
