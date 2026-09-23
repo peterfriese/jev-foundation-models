@@ -33,12 +33,12 @@ public struct SafetyIndicatorBanner: View {
         }
 
         if decision.isSafe {
-            let pct = Int((isSafeProbability ?? 1.0) * 100)
+            let detail = isSafeProbability.map { " (\(Int($0 * 100))% confidence)" } ?? ""
             return (
                 .green,
                 "checkmark.shield.fill",
                 "Safe for \(profile.shortName)",
-                "No conflicting allergens or ingredients detected (\(pct)% confidence)"
+                "No conflicting allergens or ingredients detected\(detail)"
             )
         } else if decision.primaryFlag != .none {
             // Direct dietary conflict takes precedence over trace facility advisory

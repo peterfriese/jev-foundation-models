@@ -73,7 +73,6 @@ public final class ScannerViewModel {
             if let realProduct = await openFoodFacts.fetchProduct(barcode: barcode) {
                 self.selectedProduct = realProduct
                 self.scanStatus = "Verified: \(realProduct.brand)"
-                self.onScanCompleted?()
             } else {
                 let unresolved = FoodProduct(
                     id: "unlisted-\(barcode)",
@@ -103,15 +102,26 @@ public final class ScannerViewModel {
                 self.selectedProduct = unresolved
                 self.scanStatus = "Barcode Found — Scan Label"
                 self.isEvaluating = false
+                self.onScanCompleted?()
             }
         }
     }
 
     public func handleScannedOCRText(_ rawText: String) {
-        scanStatus = "Nutrition Label Recognized"
-
         let parsedNutrition = NutritionLabelParser.parseNutritionFacts(from: rawText)
         let (extractedIngredients, warning) = NutritionLabelParser.extractIngredientsAndAllergens(from: rawText)
+
+        // Deduplicate OCR fluctuations on the same locked label
+        if isEvaluating || (
+            selectedProduct.nutrition.calories == parsedNutrition.calories &&
+            selectedProduct.nutrition.totalCarbGrams == parsedNutrition.totalCarbGrams &&
+            selectedProduct.nutrition.proteinGrams == parsedNutrition.proteinGrams &&
+            parsedNutrition.calories > 0
+        ) {
+            return
+        }
+
+        scanStatus = "Nutrition Label Recognized"
 
         let ocrProduct = FoodProduct(
             id: "ocr-\(rawText.hashValue)",
@@ -126,7 +136,6 @@ public final class ScannerViewModel {
         )
 
         self.selectedProduct = ocrProduct
-        self.onScanCompleted?()
     }
 
     private func loadSelectedPhoto() {
@@ -183,6 +192,7 @@ public final class ScannerViewModel {
                             output: response.usage.output.totalTokenCount
                         )
                         self.isEvaluating = false
+                        self.onScanCompleted?()
                     }
                 }
             } catch {
@@ -190,6 +200,7 @@ public final class ScannerViewModel {
                     self.errorMessage = error.localizedDescription
                     self.scanStatus = "Evaluation Error: \(error.localizedDescription)"
                     self.isEvaluating = false
+                    self.onScanCompleted?()
                 }
             }
         }
