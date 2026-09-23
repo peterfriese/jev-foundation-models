@@ -200,7 +200,7 @@ public func printAuditTable(organizedFiles: [OrganizedFile]) {
         let workflow = String(o.decision.workflowStage.rawValue.prefix(12)).padding(toLength: 12, withPad: " ", startingAt: 0)
         let sensitive = (o.decision.isSensitive ? "⚠️  YES" : "   No ").padding(toLength: 9, withPad: " ", startingAt: 0)
         let conf = " \(o.decision.confidenceScore)/3  "
-        let jevModel = o.serverDurationMs.map { String(format: "%6.1f ms ", $0) } ?? "  ~49.0 ms "
+        let jevModel = o.serverDurationMs.map { String(format: "%6.1f ms ", $0) } ?? "    n/a    "
         let totalLatency = String(format: "%6.1f ms ", o.durationMs)
         let dest = String(o.destinationRelativePath.prefix(29)).padding(toLength: 29, withPad: " ", startingAt: 0)
 
@@ -220,8 +220,18 @@ public func printTelemetrySummary(strategy: OrganizationStrategy, organizedFiles
     let maxDuration = organizedFiles.map(\.durationMs).max() ?? 0.0
 
     let serverTimes = organizedFiles.compactMap(\.serverDurationMs)
-    let avgServerTime: Double = serverTimes.isEmpty ? 49.0 : (serverTimes.reduce(0.0, +) / Double(serverTimes.count))
-    let networkOverhead = max(0.0, avgDuration - avgServerTime)
+    let serverComputeLine: String
+    let networkOverheadLine: String
+
+    if !serverTimes.isEmpty {
+        let avgServerTime = serverTimes.reduce(0.0, +) / Double(serverTimes.count)
+        let networkOverhead = max(0.0, avgDuration - avgServerTime)
+        serverComputeLine = String(format: "  • Jev Model Compute (Cloud):  %.1f ms / decision (Pure System One model inference)", avgServerTime)
+        networkOverheadLine = String(format: "  • Network Transit (RTT):      %.1f ms / request (Trans-Atlantic client ↔ server round-trip)", networkOverhead)
+    } else {
+        serverComputeLine = "  • Jev Model Compute (Cloud):  n/a (Offline mock simulation)"
+        networkOverheadLine = "  • Network Transit (RTT):      n/a (Offline mock simulation)"
+    }
 
     let totalInputTokens = organizedFiles.reduce(0) { $0 + $1.inputTokens }
     let totalOutputTokens = organizedFiles.reduce(0) { $0 + $1.outputTokens }
@@ -233,13 +243,13 @@ public func printTelemetrySummary(strategy: OrganizationStrategy, organizedFiles
     ================================================================================
       ⚡️ JEV DECISION TELEMETRY & LATENCY BREAKDOWN (\(strategy.rawValue.uppercased()) STRATEGY)
     ================================================================================
-      • Files Evaluated:          \(organizedFiles.count)
-      • Jev Model Compute (Cloud):\(String(format: "%.1f ms / decision", avgServerTime)) (Pure System One model inference)
-      • Network Transit (RTT):    \(String(format: "%.1f ms / request", networkOverhead)) (Trans-Atlantic client ↔ server round-trip)
-      • Total End-to-End Latency: \(String(format: "%.1f ms / file", avgDuration)) (Wall-clock from prompt to decoded object)
-      • Latency Range (Min/Max):  \(String(format: "%.1f ms (min)  —  %.1f ms (max)", minDuration, maxDuration))
-      • Token Consumption:        \(totalTokens) tokens (\(totalInputTokens) input, \(totalOutputTokens) output)
-      • Average Tokens / File:    \(String(format: "%.1f tokens", avgTokens))
+      • Files Evaluated:            \(organizedFiles.count)
+    \(serverComputeLine)
+    \(networkOverheadLine)
+      • Total End-to-End Latency:   \(String(format: "%.1f ms / file", avgDuration)) (Wall-clock from prompt to decoded object)
+      • Latency Range (Min/Max):    \(String(format: "%.1f ms (min)  —  %.1f ms (max)", minDuration, maxDuration))
+      • Token Consumption:          \(totalTokens) tokens (\(totalInputTokens) input, \(totalOutputTokens) output)
+      • Average Tokens / File:      \(String(format: "%.1f tokens", avgTokens))
     ================================================================================
     """)
 }

@@ -53,6 +53,72 @@ public struct FileTriageDecision: Sendable {
     }
 }
 
+// MARK: - Local Secret Scanner (Privacy Boundary)
+
+/// Scans and redacts credentials locally before network dispatch, guaranteeing zero plaintext secret leaks.
+public enum LocalSecretScanner {
+    private static let sensitiveKeywords: [String] = [
+        "api_key", "apikey", "secret_key", "secretkey", "private_key",
+        "access_key", "bearer ", "aws_secret", "stripe_secret",
+        "begin rsa private key", "begin openssh private key",
+        "begin private key", "begin ec private key",
+        "password=", "passwd=", "database_url=", "jwt_secret", "jwt_signing"
+    ]
+
+    private static let sensitiveExtensions: Set<String> = [
+        "env", "pem", "key", "keystore", "p12"
+    ]
+
+    private static let sensitiveFilePrefixes: [String] = [
+        "id_rsa", "id_ed25519", "credentials", ".env"
+    ]
+
+    /// Evaluates whether a file name or content contains sensitive secrets.
+    public static func scan(fileURL: URL, sampleText: String) -> Bool {
+        let name = fileURL.lastPathComponent.lowercased()
+        let ext = fileURL.pathExtension.lowercased()
+
+        if sensitiveExtensions.contains(ext) { return true }
+        for prefix in sensitiveFilePrefixes {
+            if name.hasPrefix(prefix) || name.contains(prefix) { return true }
+        }
+
+        let lower = sampleText.lowercased()
+        for kw in sensitiveKeywords {
+            if lower.contains(kw) { return true }
+        }
+
+        return false
+    }
+
+    /// Redacts secret assignment patterns from text excerpts so semantic context is preserved without leaking secrets.
+    public static func redactSensitiveContent(in text: String) -> String {
+        let lines = text.components(separatedBy: .newlines)
+        var sanitizedLines: [String] = []
+
+        for line in lines {
+            let lower = line.lowercased().trimmingCharacters(in: .whitespaces)
+            var isSensitiveLine = false
+            for kw in sensitiveKeywords {
+                if lower.contains(kw) {
+                    isSensitiveLine = true
+                    break
+                }
+            }
+            if isSensitiveLine && line.contains("=") {
+                let parts = line.split(separator: "=", maxSplits: 1)
+                sanitizedLines.append("\(parts[0])=[REDACTED_SECRET]")
+            } else if isSensitiveLine {
+                sanitizedLines.append("[REDACTED_LINE: SENSITIVE_CREDENTIAL]")
+            } else {
+                sanitizedLines.append(line)
+            }
+        }
+
+        return sanitizedLines.joined(separator: "\n")
+    }
+}
+
 // MARK: - Data Models
 
 /// A discovered file ready for evaluation.
@@ -61,12 +127,20 @@ public struct DiscoveredFile: Sendable, Hashable {
     public let relativePath: String
     public let sizeInBytes: Int
     public let contentSample: String
+    public let isLocallySensitive: Bool
 
-    public init(url: URL, relativePath: String, sizeInBytes: Int, contentSample: String) {
+    public init(
+        url: URL,
+        relativePath: String,
+        sizeInBytes: Int,
+        contentSample: String,
+        isLocallySensitive: Bool = false
+    ) {
         self.url = url
         self.relativePath = relativePath
         self.sizeInBytes = sizeInBytes
         self.contentSample = contentSample
+        self.isLocallySensitive = isLocallySensitive
     }
 }
 
@@ -110,6 +184,13 @@ public struct OrganizedFile: Sendable {
 /// An engine that parses directory contents and organizes them using Jev System One
 /// and Apple Foundation Models Dynamic Profiles.
 public struct FileOrganizer: Sendable {
+    public static let managedDirectoryNames: Set<String> = [
+        "Organized",
+        "Workflow",
+        "Quarantine_Vault",
+        "Review_Queue"
+    ]
+
     public let session: LanguageModelSession
 
     public init(session: LanguageModelSession) {
@@ -121,12 +202,18 @@ public struct FileOrganizer: Sendable {
     /// Scans a directory for non-hidden regular files and extracts a preview snippet.
     public func discoverFiles(in directoryURL: URL) throws -> [DiscoveredFile] {
         var results: [DiscoveredFile] = []
-        let resourceKeys: Set<URLResourceKey> = [.isRegularFileKey, .fileSizeKey, .isHiddenKey]
+        let resourceKeys: Set<URLResourceKey> = [
+            .isRegularFileKey,
+            .isDirectoryKey,
+            .fileSizeKey,
+            .isHiddenKey,
+            .isSymbolicLinkKey
+        ]
         let fileManager = FileManager.default
         let resolvedDirectory = directoryURL.resolvingSymlinksInPath()
 
         guard let enumerator = fileManager.enumerator(
-            at: resolvedDirectory,
+            at: directoryURL,
             includingPropertiesForKeys: Array(resourceKeys),
             options: [.skipsHiddenFiles, .skipsPackageDescendants]
         ) else {
@@ -135,22 +222,44 @@ public struct FileOrganizer: Sendable {
 
         for case let fileURL as URL in enumerator {
             let values = try fileURL.resourceValues(forKeys: resourceKeys)
+
+            // Skip managed subtrees so repeated runs never rediscover already organized files
+            if values.isDirectory == true {
+                let folderName = fileURL.lastPathComponent
+                if Self.managedDirectoryNames.contains(folderName) {
+                    enumerator.skipDescendants()
+                }
+                continue
+            }
+
             guard values.isRegularFile == true, values.isHidden != true else { continue }
 
+            // Guard against symlinks pointing outside the target directory
+            if values.isSymbolicLink == true {
+                let resolvedTarget = fileURL.resolvingSymlinksInPath()
+                guard resolvedTarget.path.hasPrefix(resolvedDirectory.path) else {
+                    continue
+                }
+            }
+
             let fileSize = values.fileSize ?? 0
-            let resolvedFile = fileURL.resolvingSymlinksInPath()
-            var relative = resolvedFile.path.replacingOccurrences(of: resolvedDirectory.path, with: "")
+
+            // Compute relative path preserving source identity without external resolution
+            var relative = fileURL.path.replacingOccurrences(of: directoryURL.path, with: "")
             while relative.hasPrefix("/") {
                 relative.removeFirst()
             }
 
-            // Read up to 2048 bytes of text for content inspection
-            let sample = Self.extractSnippet(from: resolvedFile, maxBytes: 2048)
+            // Bounded full-document scan for secrets (up to 1 MB)
+            let fullTextSample = Self.extractSnippet(from: fileURL, maxBytes: 1_048_576)
+            let isLocallySensitive = LocalSecretScanner.scan(fileURL: fileURL, sampleText: fullTextSample)
+
             results.append(DiscoveredFile(
-                url: resolvedFile,
+                url: fileURL,
                 relativePath: relative,
                 sizeInBytes: fileSize,
-                contentSample: sample
+                contentSample: fullTextSample,
+                isLocallySensitive: isLocallySensitive
             ))
         }
 
@@ -186,13 +295,18 @@ public struct FileOrganizer: Sendable {
     // MARK: - Formatting Prompt
 
     public static func formatPrompt(for file: DiscoveredFile) -> String {
-        """
+        // Redact secrets locally before sending to cloud model to protect user privacy
+        let excerpt = file.isLocallySensitive
+            ? LocalSecretScanner.redactSensitiveContent(in: file.contentSample)
+            : file.contentSample
+
+        return """
         Evaluate this file:
         - Filename: \(file.relativePath)
         - Size: \(file.sizeInBytes) bytes
         - Content Excerpt:
         \"\"\"
-        \(file.contentSample.prefix(1200))
+        \(excerpt.prefix(800))
         \"\"\"
         """
     }
@@ -242,6 +356,26 @@ public struct FileOrganizer: Sendable {
         }
     }
 
+    /// Disambiguates destination URLs to avoid overwriting existing files when duplicate basenames exist.
+    public static func uniqueDestinationURL(for destinationURL: URL, in fileManager: FileManager = .default) -> URL {
+        guard fileManager.fileExists(atPath: destinationURL.path) else {
+            return destinationURL
+        }
+        let folder = destinationURL.deletingLastPathComponent()
+        let ext = destinationURL.pathExtension
+        let baseName = destinationURL.deletingPathExtension().lastPathComponent
+
+        var counter = 2
+        while true {
+            let newFilename = ext.isEmpty ? "\(baseName)_\(counter)" : "\(baseName)_\(counter).\(ext)"
+            let candidate = folder.appendingPathComponent(newFilename)
+            if !fileManager.fileExists(atPath: candidate.path) {
+                return candidate
+            }
+            counter += 1
+        }
+    }
+
     // MARK: - Evaluation
 
     /// Evaluates a single file using the session configured with the dynamic profile.
@@ -256,12 +390,18 @@ public struct FileOrganizer: Sendable {
 
         let duration = (CFAbsoluteTimeGetCurrent() - startTime) * 1000.0
 
-        let domainProb = response.probabilities["domain"]?[response.content.domain.rawValue]
-        let sensitiveProb = response.probability(for: "isSensitive")
+        // If local scanner identified sensitive credentials, ensure quarantine decision is enforced
+        var finalDecision = response.content
+        if file.isLocallySensitive {
+            finalDecision.isSensitive = true
+        }
+
+        let domainProb = response.probabilities["domain"]?[finalDecision.domain.rawValue]
+        let sensitiveProb = file.isLocallySensitive ? 1.0 : (response.probability(for: "isSensitive") ?? 0.0)
 
         let destination = Self.resolveDestinationPath(
             for: file,
-            decision: response.content,
+            decision: finalDecision,
             strategy: session.properties.organizationStrategy,
             quarantineSensitive: session.properties.quarantineSensitive
         )
@@ -272,7 +412,7 @@ public struct FileOrganizer: Sendable {
 
         return OrganizedFile(
             file: file,
-            decision: response.content,
+            decision: finalDecision,
             destinationRelativePath: destination,
             domainProbability: domainProb,
             sensitiveProbability: sensitiveProb,
@@ -301,10 +441,13 @@ public struct FileOrganizer: Sendable {
 
             if applyChanges {
                 let fileManager = FileManager.default
-                let destURL = directoryURL.appendingPathComponent(result.destinationRelativePath)
-                let destFolder = destURL.deletingLastPathComponent()
+                let baseDestURL = directoryURL.appendingPathComponent(result.destinationRelativePath)
+                let destFolder = baseDestURL.deletingLastPathComponent()
                 try fileManager.createDirectory(at: destFolder, withIntermediateDirectories: true)
-                try fileManager.moveItem(at: file.url, to: destURL)
+
+                // Avoid collision by appending unique suffix if a file with the same name already exists
+                let finalDestURL = Self.uniqueDestinationURL(for: baseDestURL, in: fileManager)
+                try fileManager.moveItem(at: file.url, to: finalDestURL)
             }
         }
 

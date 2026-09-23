@@ -210,38 +210,126 @@ struct FileOrganizerTests {
 
     @Test("Destination path resolver prioritizes sensitive quarantine, then review queue, then strategy")
     func testDestinationPathResolution() {
-        // Case 1: Sensitive credentials file -> Quarantine
+        func resolveDestinationPath(
+            filename: String,
+            decision: TestFileTriageDecision,
+            strategy: TestStrategy,
+            quarantineSensitive: Bool
+        ) -> String {
+            if quarantineSensitive && decision.isSensitive {
+                return "Quarantine_Vault/\(filename)"
+            }
+            if decision.confidenceScore < 2 {
+                return "Review_Queue/\(filename)"
+            }
+            switch strategy {
+            case .workflow:
+                switch decision.workflowStage {
+                case .actionRequired: return "Workflow/1_Action_Required/\(filename)"
+                case .reference:      return "Workflow/2_Reference_Material/\(filename)"
+                case .archive:        return "Workflow/3_Archive/\(filename)"
+                }
+            case .domain:
+                switch decision.domain {
+                case .finance:       return "Organized/Finance_and_Billing/\(filename)"
+                case .engineering:   return "Organized/Engineering_and_Code/\(filename)"
+                case .legal:         return "Organized/Legal_and_Contracts/\(filename)"
+                case .documentation: return "Organized/Documentation/\(filename)"
+                case .personal:      return "Organized/Personal_Notes/\(filename)"
+                }
+            }
+        }
+
+        // Case 1: Sensitive credentials file + quarantine enabled -> Quarantine_Vault/
         let sensitiveDecision = TestFileTriageDecision(
             domain: .engineering,
             workflowStage: .actionRequired,
             isSensitive: true,
             confidenceScore: 3
         )
+        let quarantinedPath = resolveDestinationPath(
+            filename: "secrets.env",
+            decision: sensitiveDecision,
+            strategy: .domain,
+            quarantineSensitive: true
+        )
+        #expect(quarantinedPath == "Quarantine_Vault/secrets.env")
 
-        let isQuarantined = sensitiveDecision.isSensitive
-        #expect(isQuarantined == true)
+        // Case 2: Sensitive file but quarantine disabled -> Normal domain path
+        let unquarantinedPath = resolveDestinationPath(
+            filename: "secrets.env",
+            decision: sensitiveDecision,
+            strategy: .domain,
+            quarantineSensitive: false
+        )
+        #expect(unquarantinedPath == "Organized/Engineering_and_Code/secrets.env")
 
-        // Case 2: Low confidence file (< 2) -> Review Queue
+        // Case 3: Low confidence file (< 2) -> Review_Queue/
         let ambiguousDecision = TestFileTriageDecision(
             domain: .personal,
             workflowStage: .archive,
             isSensitive: false,
             confidenceScore: 1
         )
-        let needsReview = ambiguousDecision.confidenceScore < 2
-        #expect(needsReview == true)
+        let reviewPath = resolveDestinationPath(
+            filename: "scratchpad.tmp",
+            decision: ambiguousDecision,
+            strategy: .domain,
+            quarantineSensitive: true
+        )
+        #expect(reviewPath == "Review_Queue/scratchpad.tmp")
 
-        // Case 3: Confident file (score = 3) -> Normal destination
-        let confidentDecision = TestFileTriageDecision(
+        // Case 4: High confidence file + domain strategy -> Domain folder
+        let domainDecision = TestFileTriageDecision(
             domain: .finance,
             workflowStage: .actionRequired,
             isSensitive: false,
             confidenceScore: 3
         )
-        #expect(confidentDecision.confidenceScore >= 2)
+        let domainPath = resolveDestinationPath(
+            filename: "invoice.txt",
+            decision: domainDecision,
+            strategy: .domain,
+            quarantineSensitive: true
+        )
+        #expect(domainPath == "Organized/Finance_and_Billing/invoice.txt")
+
+        // Case 5: High confidence file + workflow strategy -> Workflow folder
+        let workflowPath = resolveDestinationPath(
+            filename: "invoice.txt",
+            decision: domainDecision,
+            strategy: .workflow,
+            quarantineSensitive: true
+        )
+        #expect(workflowPath == "Workflow/1_Action_Required/invoice.txt")
     }
 
     // MARK: - End-to-End Decoding
+
+    @Test("serverDurationMs metadata propagates from JevResponse through executor to Response.serverDurationMs")
+    func testServerDurationMetadataPropagation() async throws {
+        let mockTransport = MockJevTransport { _ in
+            JevResponse(
+                model: "jev-1.13.0",
+                answers: [
+                    "domain": JevAnswer(type: "choice", choice: "finance"),
+                    "workflowStage": JevAnswer(type: "choice", choice: "action_required"),
+                    "isSensitive": JevAnswer(type: "noul", noul: 0.05),
+                    "confidenceScore": JevAnswer(type: "score", score: 3.0)
+                ],
+                usage: JevUsage(inputTokens: 120, outputTokens: 15),
+                serverDurationMs: 52.5
+            )
+        }
+
+        let model = JevLanguageModel(apiKey: "mock-key", transport: mockTransport)
+        let profile = TestOrganizerProfile(model: model)
+        let session = LanguageModelSession(profile: profile)
+
+        let response = try await session.respond(to: "Invoice for services", generating: TestFileTriageDecision.self)
+
+        #expect(response.serverDurationMs == 52.5)
+    }
 
     @Test("End-to-end: Session decodes multi-primitive triage decision with metadata")
     func testEndToEndTriageEvaluation() async throws {

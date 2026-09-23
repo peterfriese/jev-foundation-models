@@ -52,6 +52,11 @@ if let key = apiKey {
     print("🔑 Live TypeSafe AI API key detected. Evaluating against Jev cloud endpoint.")
     model = JevLanguageModel(apiKey: key)
 } else {
+    if targetDirectory != nil && shouldApplyMoves {
+        print("❌ Error: TYPESAFE_API_KEY is required when using --apply on actual directories.")
+        print("   The deterministic offline mock is only permitted in --demo mode or --dry-run mode.")
+        exit(1)
+    }
     print("ℹ️  No TYPESAFE_API_KEY detected. Running in deterministic offline demonstration mode.")
     model = JevLanguageModel(apiKey: "offline-mock", transport: createOfflineMockTransport())
 }
