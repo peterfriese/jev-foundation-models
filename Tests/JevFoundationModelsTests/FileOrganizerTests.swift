@@ -210,45 +210,24 @@ struct FileOrganizerTests {
 
     @Test("Destination path resolver prioritizes sensitive quarantine, then review queue, then strategy")
     func testDestinationPathResolution() {
-        func resolveDestinationPath(
-            filename: String,
-            decision: TestFileTriageDecision,
-            strategy: TestStrategy,
-            quarantineSensitive: Bool
-        ) -> String {
-            if quarantineSensitive && decision.isSensitive {
-                return "Quarantine_Vault/\(filename)"
-            }
-            if decision.confidenceScore < 2 {
-                return "Review_Queue/\(filename)"
-            }
-            switch strategy {
-            case .workflow:
-                switch decision.workflowStage {
-                case .actionRequired: return "Workflow/1_Action_Required/\(filename)"
-                case .reference:      return "Workflow/2_Reference_Material/\(filename)"
-                case .archive:        return "Workflow/3_Archive/\(filename)"
-                }
-            case .domain:
-                switch decision.domain {
-                case .finance:       return "Organized/Finance_and_Billing/\(filename)"
-                case .engineering:   return "Organized/Engineering_and_Code/\(filename)"
-                case .legal:         return "Organized/Legal_and_Contracts/\(filename)"
-                case .documentation: return "Organized/Documentation/\(filename)"
-                case .personal:      return "Organized/Personal_Notes/\(filename)"
-                }
-            }
+        func discoveredFile(_ relativePath: String) -> DiscoveredFile {
+            DiscoveredFile(
+                url: URL(fileURLWithPath: "/tmp/\(relativePath)"),
+                relativePath: relativePath,
+                sizeInBytes: 128,
+                contentSample: "sample"
+            )
         }
 
         // Case 1: Sensitive credentials file + quarantine enabled -> Quarantine_Vault/
-        let sensitiveDecision = TestFileTriageDecision(
+        let sensitiveDecision = FileTriageDecision(
             domain: .engineering,
             workflowStage: .actionRequired,
             isSensitive: true,
             confidenceScore: 3
         )
-        let quarantinedPath = resolveDestinationPath(
-            filename: "secrets.env",
+        let quarantinedPath = FileOrganizer.resolveDestinationPath(
+            for: discoveredFile("nested/secrets.env"),
             decision: sensitiveDecision,
             strategy: .domain,
             quarantineSensitive: true
@@ -256,8 +235,8 @@ struct FileOrganizerTests {
         #expect(quarantinedPath == "Quarantine_Vault/secrets.env")
 
         // Case 2: Sensitive file but quarantine disabled -> Normal domain path
-        let unquarantinedPath = resolveDestinationPath(
-            filename: "secrets.env",
+        let unquarantinedPath = FileOrganizer.resolveDestinationPath(
+            for: discoveredFile("nested/secrets.env"),
             decision: sensitiveDecision,
             strategy: .domain,
             quarantineSensitive: false
@@ -265,14 +244,14 @@ struct FileOrganizerTests {
         #expect(unquarantinedPath == "Organized/Engineering_and_Code/secrets.env")
 
         // Case 3: Low confidence file (< 2) -> Review_Queue/
-        let ambiguousDecision = TestFileTriageDecision(
+        let ambiguousDecision = FileTriageDecision(
             domain: .personal,
             workflowStage: .archive,
             isSensitive: false,
             confidenceScore: 1
         )
-        let reviewPath = resolveDestinationPath(
-            filename: "scratchpad.tmp",
+        let reviewPath = FileOrganizer.resolveDestinationPath(
+            for: discoveredFile("scratch/scratchpad.tmp"),
             decision: ambiguousDecision,
             strategy: .domain,
             quarantineSensitive: true
@@ -280,14 +259,14 @@ struct FileOrganizerTests {
         #expect(reviewPath == "Review_Queue/scratchpad.tmp")
 
         // Case 4: High confidence file + domain strategy -> Domain folder
-        let domainDecision = TestFileTriageDecision(
+        let domainDecision = FileTriageDecision(
             domain: .finance,
             workflowStage: .actionRequired,
             isSensitive: false,
             confidenceScore: 3
         )
-        let domainPath = resolveDestinationPath(
-            filename: "invoice.txt",
+        let domainPath = FileOrganizer.resolveDestinationPath(
+            for: discoveredFile("records/invoice.txt"),
             decision: domainDecision,
             strategy: .domain,
             quarantineSensitive: true
@@ -295,8 +274,8 @@ struct FileOrganizerTests {
         #expect(domainPath == "Organized/Finance_and_Billing/invoice.txt")
 
         // Case 5: High confidence file + workflow strategy -> Workflow folder
-        let workflowPath = resolveDestinationPath(
-            filename: "invoice.txt",
+        let workflowPath = FileOrganizer.resolveDestinationPath(
+            for: discoveredFile("records/invoice.txt"),
             decision: domainDecision,
             strategy: .workflow,
             quarantineSensitive: true

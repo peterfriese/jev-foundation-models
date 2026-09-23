@@ -109,7 +109,7 @@ if isDemoMode {
 
     print("▶ Evaluating files with Jev System One (Domain Dynamic Profile)...")
     let pass1Results = try await organizer.organize(directoryURL: tempDir, applyChanges: false) { file, result, current, total in
-        let serverStr = result.serverDurationMs.map { String(format: "Jev: %.0fms", $0) } ?? "Jev: ~49ms"
+        let serverStr = result.serverDurationMs.map { String(format: "Jev: %.0fms", $0) } ?? "Jev: n/a"
         let totalStr = String(format: "total: %.0fms", result.durationMs)
         let tokenStr = result.inputTokens > 0 ? " • \(result.inputTokens + result.outputTokens) tok" : ""
         print("  [\(current)/\(total)] \(result.file.relativePath) ──► \(result.destinationRelativePath) (\(serverStr), \(totalStr)\(tokenStr))")
@@ -138,7 +138,7 @@ if isDemoMode {
 
     print("▶ Re-evaluating files under Workflow Dynamic Profile...")
     let pass2Results = try await organizer.organize(directoryURL: tempDir, applyChanges: false) { file, result, current, total in
-        let serverStr = result.serverDurationMs.map { String(format: "Jev: %.0fms", $0) } ?? "Jev: ~49ms"
+        let serverStr = result.serverDurationMs.map { String(format: "Jev: %.0fms", $0) } ?? "Jev: n/a"
         let totalStr = String(format: "total: %.0fms", result.durationMs)
         let tokenStr = result.inputTokens > 0 ? " • \(result.inputTokens + result.outputTokens) tok" : ""
         print("  [\(current)/\(total)] \(result.file.relativePath) ──► \(result.destinationRelativePath) (\(serverStr), \(totalStr)\(tokenStr))")
@@ -206,7 +206,7 @@ if isDemoMode {
         directoryURL: dir,
         applyChanges: shouldApplyMoves
     ) { file, result, current, total in
-        let serverStr = result.serverDurationMs.map { String(format: "Jev: %.0fms", $0) } ?? "Jev: ~49ms"
+        let serverStr = result.serverDurationMs.map { String(format: "Jev: %.0fms", $0) } ?? "Jev: n/a"
         let totalStr = String(format: "total: %.0fms", result.durationMs)
         let tokenStr = result.inputTokens > 0 ? " • \(result.inputTokens + result.outputTokens) tok" : ""
         print("  [\(current)/\(total)] \(result.file.relativePath) ──► \(result.destinationRelativePath) (\(serverStr), \(totalStr)\(tokenStr))")
