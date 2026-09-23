@@ -77,7 +77,16 @@ public final class ScannerViewModel {
 
             if let realProduct = fetched {
                 self.selectedProduct = realProduct
-                self.scanStatus = "Verified: \(realProduct.brand)"
+                if realProduct.id.hasPrefix("unlisted-ingredients-") {
+                    self.decision = nil
+                    self.isSafeProbability = nil
+                    self.confidence = nil
+                    self.scanStatus = "\(realProduct.brand) found — scan label"
+                    self.isEvaluating = false
+                    self.onScanCompleted?()
+                } else {
+                    self.scanStatus = "Verified: \(realProduct.brand)"
+                }
             } else {
                 let unresolved = FoodProduct(
                     id: "unlisted-\(barcode)",

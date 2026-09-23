@@ -92,6 +92,7 @@ const typesafeApiKey = defineSecret("TYPESAFE_API_KEY");
 export const systemone = onRequest(
   {
     cors: false,
+    enforceAppCheck: true, // Rejects unverified traffic at Google Cloud edge
     secrets: [typesafeApiKey],
     // minInstances: 1 keeps a container warm 24/7 to eliminate ~500ms-1.5s cold starts
     minInstances: 1,
@@ -256,7 +257,9 @@ public struct FirebaseAppCheckTransport: JevTransport, Sendable {
         }
 
         // 2. Prepare HTTP request directed to your Firebase Cloud Function
-        let targetURL = proxyEndpoint ?? endpoint
+        guard let targetURL = proxyEndpoint else {
+            throw JevError.networkError("FirebaseAppCheckTransport requires an explicit proxyEndpoint pointing to your authenticated Cloud Function reverse proxy.")
+        }
         var urlRequest = URLRequest(url: targetURL)
         urlRequest.httpMethod = "POST"
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")

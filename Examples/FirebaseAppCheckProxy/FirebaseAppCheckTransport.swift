@@ -54,8 +54,8 @@ public struct FirebaseAppCheckTransport: JevTransport, Sendable {
         }
 
         // 2. Prepare HTTP request to the Cloud Function proxy
-        guard let targetURL = proxyEndpoint ?? (endpoint.host?.contains("typesafe.ai") == false ? endpoint : nil) else {
-            throw JevError.networkError("FirebaseAppCheckTransport requires an explicit proxyEndpoint pointing to your authenticated Cloud Function proxy.")
+        guard let targetURL = proxyEndpoint else {
+            throw JevError.networkError("FirebaseAppCheckTransport requires an explicit proxyEndpoint pointing to your authenticated Cloud Function reverse proxy.")
         }
         var urlRequest = URLRequest(url: targetURL)
         urlRequest.httpMethod = "POST"

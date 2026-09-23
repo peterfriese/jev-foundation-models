@@ -161,19 +161,7 @@ public final class CameraScannerService: NSObject {
             ]
 
             for orientation in orientations {
-                var foundText: String?
-
-                let request = VNRecognizeTextRequest { request, error in
-                    guard error == nil, let observations = request.results as? [VNRecognizedTextObservation] else { return }
-                    let spatialLines = NutritionLabelParser.reconstructSpatialLines(from: observations)
-                    let joined = spatialLines.isEmpty
-                        ? observations.compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n")
-                        : spatialLines.joined(separator: "\n")
-
-                    if NutritionLabelParser.isNutritionLabelOrIngredients(joined) {
-                        foundText = joined
-                    }
-                }
+                let request = VNRecognizeTextRequest()
                 request.recognitionLevel = .accurate
                 request.usesLanguageCorrection = true
                 request.recognitionLanguages = ["de-DE", "en-US", "fr-FR", "es-ES", "it-IT"]
@@ -182,13 +170,20 @@ public final class CameraScannerService: NSObject {
                 let handler = VNImageRequestHandler(cgImage: cgImage, orientation: orientation, options: [:])
                 try? handler.perform([request])
 
-                if let text = foundText {
-                    DispatchQueue.main.async {
-                        AudioFeedback.playNutritionLabelSound()
-                        self.recognizedText = text
-                        self.onLabelTextDetected?(text)
+                if let observations = request.results {
+                    let spatialLines = NutritionLabelParser.reconstructSpatialLines(from: observations)
+                    let text = spatialLines.isEmpty
+                        ? observations.compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n")
+                        : spatialLines.joined(separator: "\n")
+
+                    if NutritionLabelParser.isNutritionLabelOrIngredients(text) {
+                        DispatchQueue.main.async {
+                            AudioFeedback.playNutritionLabelSound()
+                            self.recognizedText = text
+                            self.onLabelTextDetected?(text)
+                        }
+                        return
                     }
-                    return
                 }
             }
         }
