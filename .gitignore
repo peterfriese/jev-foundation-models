@@ -49,3 +49,9 @@ firestore-debug.log
 .idea/
 *.swp
 *~
+
+# Agent runtime directories (managed locally by Luca/agents)
+.agents/skills/
+.claude/skills/
+
+

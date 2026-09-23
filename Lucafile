@@ -1,0 +1,13 @@
+# Lucafile — Development Tools and Agent Skills Configuration
+# Run `luca install` to install or sync development skills.
+
+agents:
+  - opencode
+  - claude-code
+
+skills:
+  - name: stratos-core
+    repository: peterfriese/Stratos
+
+  - name: stratos-swift
+    repository: peterfriese/Stratos
