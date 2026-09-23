@@ -145,14 +145,27 @@ public struct ArticleDeduplicator: Sendable {
         // Extract calibrated noul probability directly from Jev response metadata
         let probability = response.probability(for: "isDuplicate") ?? (response.content.isDuplicate ? 1.0 : 0.0)
         let judgement = response.judgement(for: "isDuplicate", policy: policy)
-        let meetsThreshold = probability >= threshold
+
+        // Operational decision:
+        // - .auto with true: decisive duplicate
+        // - .confirm: leaning duplicate, prompt user for confirmation
+        // - .escalate: model is genuinely unsure (inside undecided band); escalate for manual review
+        let isFlagged: Bool
+        switch judgement.decision {
+        case .auto:
+            isFlagged = (judgement.answer == true)
+        case .confirm:
+            isFlagged = (judgement.answer == true || probability >= threshold)
+        case .escalate:
+            isFlagged = true
+        }
 
         let usage = (
             input: response.usage.input.totalTokenCount,
             output: response.usage.output.totalTokenCount
         )
 
-        return (isDuplicate: meetsThreshold, probability: probability, judgement: judgement, tokenUsage: usage)
+        return (isDuplicate: isFlagged, probability: probability, judgement: judgement, tokenUsage: usage)
     }
 
     // MARK: - Full Deduplication Pipeline

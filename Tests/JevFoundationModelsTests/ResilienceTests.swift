@@ -87,6 +87,30 @@ struct ResilienceTests {
         #expect(largeDuration * 0.0 == .zero)
         #expect(largeDuration * -1.0 == .zero)
         #expect(largeDuration * Double.nan == .zero)
+
+        // Negative duration saturation
+        let negativeDuration = Duration.seconds(-1_000_000)
+        let negativeSaturated = negativeDuration * hugeMultiplier
+        #expect(negativeSaturated == .negativeSaturated)
+
+        // Infinite multiplier saturation
+        #expect(largeDuration * Double.infinity == .saturated)
+        #expect(negativeDuration * Double.infinity == .negativeSaturated)
+    }
+
+    @Test("Extreme retry attempt counts cap at maxRetryAfter instead of overflowing to zero")
+    func testBackoffExtremeAttemptsClamped() {
+        let policy = RetryPolicy(
+            maxAttempts: 100,
+            initialDelay: .milliseconds(500),
+            multiplier: 2.0,
+            maxRetryAfter: .seconds(60)
+        )
+
+        // Attempt 100: 2^99 overflows standard Double without clamping
+        let delay = policy.backoff(afterAttempt: 100, randomness: 0.5)
+        #expect(delay == .seconds(60))
+        #expect(delay > .zero)
     }
 
     @Test("Nonsensical configurations are normalized gracefully without trapping")

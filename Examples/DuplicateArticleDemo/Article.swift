@@ -30,7 +30,11 @@ public enum MatchReason: Sendable, Equatable {
     case deterministic(rule: String)
 
     /// Layer 2: Semantic match via Jev Foundation Models (calibrated probability).
-    case semantic(probability: Double, threshold: Double, judgement: NoulJudgement? = nil)
+    case semantic(probability: Double, threshold: Double, judgement: NoulJudgement?)
+
+    public static func semantic(probability: Double, threshold: Double) -> MatchReason {
+        .semantic(probability: probability, threshold: threshold, judgement: nil)
+    }
 
     public var description: String {
         switch self {

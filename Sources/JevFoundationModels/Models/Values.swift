@@ -14,15 +14,15 @@ public struct Probability: Sendable, Hashable, Comparable, Codable, ExpressibleB
 
     /// Clamps the input value into `0.0...1.0`.
     ///
-    /// - Note: Traps if `value` is `NaN`.
+    /// - Note: Traps if `value` is non-finite (`NaN` or `infinity`).
     public init(clamping value: Double) {
-        precondition(!value.isNaN, "Probability cannot be NaN")
+        precondition(value.isFinite, "Probability must be a finite number")
         self.value = min(max(value, 0.0), 1.0)
     }
 
     /// Initializes a `Probability` only if `value` is a finite number in `0.0...1.0`.
     public init?(exactly value: Double) {
-        guard !value.isNaN, (0.0...1.0).contains(value) else { return nil }
+        guard value.isFinite, (0.0...1.0).contains(value) else { return nil }
         self.value = value
     }
 
@@ -151,24 +151,49 @@ public struct ScoreValue: Sendable, Hashable, CustomStringConvertible {
         probabilities: [Int: Double] = [:],
         confidence: Double = 1.0
     ) {
-        precondition(!value.isNaN, "Score value cannot be NaN")
-        precondition(!confidence.isNaN && (0.0...1.0).contains(confidence), "Confidence must be within 0.0...1.0")
+        precondition(value.isFinite, "Score value must be a finite number")
+        precondition(confidence.isFinite && (0.0...1.0).contains(confidence), "Confidence must be a finite number within 0.0...1.0")
         self.value = value
         self.legend = legend
         self.probabilities = probabilities
         self.confidence = confidence
     }
 
-    /// The nearest discrete whole rubric level.
-    public var rounded: Int {
-        Int(value.rounded())
+    /// Initializes a `ScoreValue` only if all numeric values are finite and confidence is bounded.
+    public init?(
+        validatingValue value: Double,
+        legend: [Int: String] = [:],
+        probabilities: [Int: Double] = [:],
+        confidence: Double = 1.0
+    ) {
+        guard value.isFinite, confidence.isFinite, (0.0...1.0).contains(confidence) else {
+            return nil
+        }
+        self.value = value
+        self.legend = legend
+        self.probabilities = probabilities
+        self.confidence = confidence
     }
 
-    /// Maps the weighted score onto `0.0...1.0`. Returns `nil` if there are fewer than 2 levels.
+    /// The nearest discrete whole rubric level. Returns 0 if value is not finite.
+    public var rounded: Int {
+        guard value.isFinite else { return 0 }
+        return Int(value.rounded())
+    }
+
+    /// Maps the weighted score onto `0.0...1.0` using actual rubric level bounds.
+    /// Returns `nil` if there are fewer than 2 levels or if value is non-finite.
     public var normalized: Double? {
-        let levels = max(legend.count, probabilities.count)
-        guard levels >= 2 else { return nil }
-        return value / Double(levels - 1)
+        guard value.isFinite else { return nil }
+        let keys = Set(legend.keys).union(probabilities.keys)
+        guard let minKey = keys.min(), let maxKey = keys.max(), maxKey > minKey else {
+            let count = max(legend.count, probabilities.count)
+            guard count >= 2 else { return nil }
+            return min(max(value / Double(count - 1), 0.0), 1.0)
+        }
+        let range = Double(maxKey - minKey)
+        let normalizedVal = (value - Double(minKey)) / range
+        return min(max(normalizedVal, 0.0), 1.0)
     }
 
     public var description: String {
@@ -188,11 +213,11 @@ extension ScoreValue: Codable {
         let rawProbabilities = try container.decodeIfPresent([String: Double].self, forKey: .probabilities) ?? [:]
         let confidence = try container.decodeIfPresent(Double.self, forKey: .confidence) ?? 1.0
 
-        guard !confidence.isNaN, (0.0...1.0).contains(confidence) else {
+        guard confidence.isFinite, (0.0...1.0).contains(confidence) else {
             throw DecodingError.dataCorruptedError(
                 forKey: .confidence,
                 in: container,
-                debugDescription: "Confidence must be within 0.0...1.0, got \(confidence)"
+                debugDescription: "Confidence must be a finite number within 0.0...1.0, got \(confidence)"
             )
         }
 
@@ -220,11 +245,11 @@ extension ScoreValue: Codable {
         let legend = try parseIndexed(rawLegend, key: .legend)
         let probabilities = try parseIndexed(rawProbabilities, key: .probabilities)
 
-        guard !value.isNaN else {
+        guard value.isFinite else {
             throw DecodingError.dataCorruptedError(
                 forKey: .score,
                 in: container,
-                debugDescription: "Score must not be NaN"
+                debugDescription: "Score must be a finite number, got \(value)"
             )
         }
 

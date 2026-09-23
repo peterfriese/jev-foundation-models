@@ -71,6 +71,7 @@ public extension LanguageModelSession.Response {
     }
 
     /// Returns the calibrated probability of `true` for a boolean (`noul`) question.
+    /// Returns the calibrated probability of `true` for a boolean (`noul`) question.
     ///
     /// - Parameter question: The question or property name in the `@Generable` schema.
     /// - Returns: A calibrated probability between 0.0 and 1.0, or `nil` if not available.
@@ -87,6 +88,12 @@ public extension LanguageModelSession.Response {
     /// - Returns: A calibrated `Probability` between 0.0 and 1.0, or `nil` if not available.
     func typedProbability(for question: String) -> Probability? {
         probability(for: question).map(Probability.init(clamping:))
+    }
+
+    /// Returns the calibrated `Probability` domain value for a boolean (`noul`) question (alias for `typedProbability`).
+    func probabilityValue(for question: String) -> Probability? {
+        typedProbability(for: question)
+    }
     }
 
     /// Returns the confidence score for a given categorical or scored question.

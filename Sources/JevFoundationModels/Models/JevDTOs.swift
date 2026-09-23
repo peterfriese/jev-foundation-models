@@ -124,11 +124,14 @@ public struct JevAnswer: Codable, Sendable, Equatable {
 
     /// Converts this answer into a typed `ScoreValue` if it is a rubric `score` answer.
     public var scoreValue: ScoreValue? {
+    public var scoreValue: ScoreValue? {
         scoreValue(minimum: nil, maximum: nil, isInteger: false)
     }
 
     func scoreValue(minimum: Double?, maximum: Double?, isInteger: Bool) -> ScoreValue? {
-        guard let score else { return nil }
+        guard let score, score.isFinite else { return nil }
+        let conf = confidence ?? 1.0
+        guard conf.isFinite, (0.0...1.0).contains(conf) else { return nil }
         var indexedLegend: [Int: String] = [:]
         if let legend {
             for (k, v) in legend {
@@ -138,7 +141,7 @@ public struct JevAnswer: Codable, Sendable, Equatable {
         var indexedProbs: [Int: Double] = [:]
         if let probabilities {
             for (k, v) in probabilities {
-                if let idx = Int(k) { indexedProbs[idx] = v }
+                if let idx = Int(k), v.isFinite { indexedProbs[idx] = v }
             }
         }
 
@@ -150,7 +153,7 @@ public struct JevAnswer: Codable, Sendable, Equatable {
             levelCount: levelCount
         )
         return ScoreValue(
-            value: adjustedScore,
+            validatingValue: adjustedScore,
             legend: shiftedLevels(
                 indexedLegend,
                 minimum: minimum,
@@ -165,7 +168,7 @@ public struct JevAnswer: Codable, Sendable, Equatable {
                 isInteger: isInteger,
                 levelCount: levelCount
             ),
-            confidence: confidence ?? 1.0
+            confidence: conf
         )
     }
 

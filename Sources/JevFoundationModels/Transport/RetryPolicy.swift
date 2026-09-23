@@ -48,9 +48,13 @@ public struct RetryPolicy: Sendable, Hashable {
     /// Calculates exponential backoff with jitter for the attempt that just failed, where `attempt` is 1-based.
     public func backoff(afterAttempt attempt: Int, randomness: Double = Double.random(in: 0...1)) -> Duration {
         let exponent = max(attempt - 1, 0)
-        let scaled = initialDelay * pow(multiplier, Double(exponent))
+        let rawGrowth = pow(multiplier, Double(exponent))
+        let growth = rawGrowth.isFinite ? rawGrowth : Double.greatestFiniteMagnitude
+        let scaled = rawGrowth.isFinite ? (initialDelay * growth) : .saturated
         let factor = 1.0 + jitter * (randomness * 2.0 - 1.0)
-        return scaled * factor
+        let effectiveFactor = factor.isFinite ? max(factor, 0.0) : 1.0
+        let result = scaled * effectiveFactor
+        return min(result, maxRetryAfter)
     }
 
     /// Parses an RFC 9110 `Retry-After` header value (either integer seconds or HTTP-date), bounded by `maxRetryAfter`.
@@ -102,15 +106,31 @@ public struct RetryPolicy: Sendable, Hashable {
 extension Duration {
     /// Scales a duration, rounded to the nearest nanosecond with saturation protection against integer overflow.
     public static func * (lhs: Duration, rhs: Double) -> Duration {
-        guard rhs.isFinite, rhs > 0 else { return .zero }
+        guard !rhs.isNaN, rhs > 0 else { return .zero }
         let seconds = Double(lhs.components.seconds) + Double(lhs.components.attoseconds) * 1e-18
+        if rhs.isInfinite {
+            return seconds >= 0 ? .saturated : .negativeSaturated
+        }
         let nanoseconds = (seconds * rhs * 1_000_000_000).rounded()
-        guard nanoseconds.isFinite, nanoseconds < Double(Int64.max) else { return .saturated }
+        guard nanoseconds.isFinite else {
+            return seconds >= 0 ? .saturated : .negativeSaturated
+        }
+        if nanoseconds >= Double(Int64.max) {
+            return .saturated
+        }
+        if nanoseconds <= Double(Int64.min) {
+            return .negativeSaturated
+        }
         return .nanoseconds(Int64(nanoseconds))
     }
 
     /// The largest delay represented in whole nanoseconds without overflow.
     public static var saturated: Duration {
         .nanoseconds(Int64.max)
+    }
+
+    /// The smallest (most negative) duration represented in whole nanoseconds without underflow.
+    public static var negativeSaturated: Duration {
+        .nanoseconds(Int64.min)
     }
 }

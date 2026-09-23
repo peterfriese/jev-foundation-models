@@ -72,6 +72,50 @@ struct ValuesAndRoutingTests {
         #expect(singleLevel.normalized == nil)
     }
 
+    @Test("ScoreValue normalized correctly maps 1-based and sparse rubric keys")
+    func testScoreValueNonZeroBasedAndSparseKeys() {
+        // 1-based rubric: levels 1, 2, 3
+        let oneBased = ScoreValue(
+            value: 1.0, // Minimum
+            legend: [1: "Low", 2: "Med", 3: "High"],
+            probabilities: [1: 1.0, 2: 0.0, 3: 0.0]
+        )
+        #expect(oneBased.normalized == 0.0)
+
+        let oneBasedMid = ScoreValue(
+            value: 2.0, // Midpoint
+            legend: [1: "Low", 2: "Med", 3: "High"],
+            probabilities: [1: 0.0, 2: 1.0, 3: 0.0]
+        )
+        #expect(oneBasedMid.normalized == 0.5)
+
+        let oneBasedMax = ScoreValue(
+            value: 3.0, // Maximum
+            legend: [1: "Low", 2: "Med", 3: "High"],
+            probabilities: [1: 0.0, 2: 0.0, 3: 1.0]
+        )
+        #expect(oneBasedMax.normalized == 1.0)
+
+        // Sparse keys: 0 and 2 (range = 2)
+        let sparse = ScoreValue(
+            value: 2.0,
+            legend: [0: "Zero", 2: "Two"],
+            probabilities: [0: 0.0, 2: 1.0]
+        )
+        #expect(sparse.normalized == 1.0)
+    }
+
+    @Test("ScoreValue validating initializer safely rejects non-finite values and out-of-range confidence")
+    func testScoreValueNonFiniteSafety() {
+        #expect(ScoreValue(validatingValue: .infinity) == nil)
+        #expect(ScoreValue(validatingValue: -.infinity) == nil)
+        #expect(ScoreValue(validatingValue: .nan) == nil)
+        #expect(ScoreValue(validatingValue: 1.0, confidence: 1.2) == nil)
+        #expect(ScoreValue(validatingValue: 1.0, confidence: -0.1) == nil)
+        #expect(ScoreValue(validatingValue: 1.0, confidence: .nan) == nil)
+        #expect(ScoreValue(validatingValue: 1.0, confidence: 0.95) != nil)
+    }
+
     @Test("ScoreValue Codable encodes and decodes accurately")
     func testScoreValueCodable() throws {
         let original = ScoreValue(
