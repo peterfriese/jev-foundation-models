@@ -5,14 +5,14 @@ import UniformTypeIdentifiers
 /// An Apple Foundation Models provider for TypeSafe AI's Jev System One decision models.
 public struct JevLanguageModel: LanguageModel, Sendable {
     public struct Configuration: Hashable, Sendable {
-        public var apiKey: String
+        public var apiKey: String?
         public var modelID: String
         public var endpoint: URL
         public var transport: AnyJevTransport
         public var retryPolicy: RetryPolicy
 
         public init(
-            apiKey: String,
+            apiKey: String? = nil,
             modelID: String = "jev-latest",
             endpoint: URL = URL(string: "https://api.typesafe.ai/v1/systemone")!,
             transport: AnyJevTransport? = nil,
@@ -35,7 +35,7 @@ public struct JevLanguageModel: LanguageModel, Sendable {
     }
 
     public init(
-        apiKey: String,
+        apiKey: String? = nil,
         modelID: String = "jev-latest",
         endpoint: URL = URL(string: "https://api.typesafe.ai/v1/systemone")!,
         transport: (any JevTransport)? = nil,

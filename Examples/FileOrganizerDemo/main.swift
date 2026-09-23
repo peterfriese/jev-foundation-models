@@ -58,7 +58,7 @@ if let key = apiKey {
         exit(1)
     }
     print("ℹ️  No TYPESAFE_API_KEY detected. Running in deterministic offline demonstration mode.")
-    model = JevLanguageModel(apiKey: "offline-mock", transport: createOfflineMockTransport())
+    model = JevLanguageModel(transport: createOfflineMockTransport())
 }
 
 // MARK: - 2. Configure Dynamic Profile & LanguageModelSession

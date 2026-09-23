@@ -38,7 +38,7 @@ public struct FirebaseAppCheckTransport: JevTransport, Sendable {
 
     public func send(
         request: JevRequest,
-        apiKey: String,
+        apiKey: String?,
         endpoint: URL
     ) async throws -> JevResponse {
         #if canImport(FirebaseAppCheck)

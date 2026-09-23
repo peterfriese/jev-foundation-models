@@ -41,7 +41,7 @@ On physical Apple devices running iOS 14+ / macOS 14+, Firebase App Check activa
 Because `JevFoundationModels` defines `JevTransport` as an open `Sendable` protocol:
 ```swift
 public protocol JevTransport: Sendable {
-    func send(request: JevRequest, apiKey: String, endpoint: URL) async throws -> JevResponse
+    func send(request: JevRequest, apiKey: String?, endpoint: URL) async throws -> JevResponse
 }
 ```
 Client applications can conform an application-level type (`FirebaseAppCheckTransport`) to `JevTransport`. The custom transport:
@@ -86,7 +86,7 @@ While standard App Check tokens block non-app clients, a user on a jailbroken or
    // OR: Replay-protected evaluations for sensitive actions
    // let transport = FirebaseAppCheckTransport(proxyEndpoint: proxyURL, tokenStrategy: .singleUse)
 
-   let jev = JevLanguageModel(apiKey: "app-check", transport: transport)
+   let jev = JevLanguageModel(transport: transport)
    let session = LanguageModelSession(model: jev)
    let response = try await session.respond(to: stateText, generating: MyDecision.self)
    ```
