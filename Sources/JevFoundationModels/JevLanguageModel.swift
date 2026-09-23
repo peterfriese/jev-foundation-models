@@ -9,17 +9,20 @@ public struct JevLanguageModel: LanguageModel, Sendable {
         public var modelID: String
         public var endpoint: URL
         public var transport: AnyJevTransport
+        public var retryPolicy: RetryPolicy
 
         public init(
             apiKey: String,
             modelID: String = "jev-latest",
             endpoint: URL = URL(string: "https://api.typesafe.ai/v1/systemone")!,
-            transport: AnyJevTransport = AnyJevTransport(URLSessionTransport())
+            transport: AnyJevTransport? = nil,
+            retryPolicy: RetryPolicy = .default
         ) {
             self.apiKey = apiKey
             self.modelID = modelID
             self.endpoint = endpoint
-            self.transport = transport
+            self.retryPolicy = retryPolicy
+            self.transport = transport ?? AnyJevTransport(URLSessionTransport(retryPolicy: retryPolicy))
         }
     }
 
@@ -35,14 +38,17 @@ public struct JevLanguageModel: LanguageModel, Sendable {
         apiKey: String,
         modelID: String = "jev-latest",
         endpoint: URL = URL(string: "https://api.typesafe.ai/v1/systemone")!,
-        transport: (any JevTransport)? = nil
+        transport: (any JevTransport)? = nil,
+        retryPolicy: RetryPolicy = .default
     ) {
-        let resolvedTransport = transport.map { AnyJevTransport($0) } ?? AnyJevTransport(URLSessionTransport())
+        let resolvedTransport = transport.map { AnyJevTransport($0) }
+            ?? AnyJevTransport(URLSessionTransport(retryPolicy: retryPolicy))
         self.executorConfiguration = Configuration(
             apiKey: apiKey,
             modelID: modelID,
             endpoint: endpoint,
-            transport: resolvedTransport
+            transport: resolvedTransport,
+            retryPolicy: retryPolicy
         )
     }
 

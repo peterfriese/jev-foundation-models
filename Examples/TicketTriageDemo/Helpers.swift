@@ -1,5 +1,6 @@
 import Foundation
 import FoundationModels
+import JevFoundationModels
 
 // MARK: - Environment & Key Resolution
 
@@ -59,7 +60,11 @@ func printDemoHeader(ticket: String) {
     print("Evaluating decision with Jev System One model...")
 }
 
-func printDemoResults(_ response: LanguageModelSession.Response<TicketTriage>, durationMs: Double) {
+func printDemoResults(
+    _ response: LanguageModelSession.Response<TicketTriage>,
+    durationMs: Double,
+    policy: RoutingPolicy = .default
+) {
     print("\nEvaluation Complete in \(String(format: "%.1f", durationMs))ms!")
     print("==============================================================")
     print("  Structured Decision Result (@Generable TicketTriage)")
@@ -67,6 +72,44 @@ func printDemoResults(_ response: LanguageModelSession.Response<TicketTriage>, d
     print("  • isUrgent:         \(response.content.isUrgent)")
     print("  • department:       \(response.content.department)")
     print("  • frustrationLevel: \(response.content.frustrationLevel) / 2")
+
+    print("\nOperational Confidence Routing (Policy: auto ≥ \(formatPercentage(policy.autoAtOrAbove)), escalate < \(formatPercentage(policy.escalateBelow))):")
+    print("--------------------------------------------------------------")
+
+    // 1. Categorical Department Routing
+    let deptDecision = response.decision(for: "department", policy: policy)
+    let deptConf = response.confidence(for: "department")
+    let confStr = deptConf.map { formatPercentage($0) } ?? "n/a"
+    switch deptDecision {
+    case .auto:
+        print("  • Department Action:  [AUTO-ROUTE] ──► Route directly to \(response.content.department) inbox (Confidence: \(confStr))")
+    case .confirm:
+        print("  • Department Action:  [SUGGESTION] ──► Suggest \(response.content.department), prompt triage agent (Confidence: \(confStr))")
+    case .escalate:
+        print("  • Department Action:  [ESCALATE]   ──► Route to manual supervisor queue (Confidence: \(confStr))")
+    }
+
+    // 2. Boolean Noul Routing with Undecided Band
+    let urgentJudgement = response.judgement(for: "isUrgent", policy: policy)
+    let probStr = response.probability(for: "isUrgent").map(formatPercentage) ?? "n/a"
+    switch urgentJudgement.decision {
+    case .auto:
+        if urgentJudgement.answer == true {
+            print("  • Urgency Action:     [P0 CRITICAL] ──► Confident urgent; page on-call response team (Prob: \(probStr))")
+        } else {
+            print("  • Urgency Action:     [STANDARD SLA] ──► Confident routine; standard queue (Prob: \(probStr))")
+        }
+    case .confirm:
+        print("  • Urgency Action:     [CONFIRM PRIORITY] ──► Leaning priority; prompt agent to confirm (Prob: \(probStr))")
+    case .escalate:
+        print("  • Urgency Action:     [UNDECIDED ESCALATE] ──► Model inside 0.35...0.65 band; manual triage (Prob: \(probStr))")
+    }
+
+    // 3. Rubric Score Inspection
+    if let frustrationScore = response.scoreValue(for: "frustrationLevel") {
+        let normStr = frustrationScore.normalized.map { String(format: "%.2f", $0) } ?? "n/a"
+        print("  • Frustration Rubric: Weighted: \(String(format: "%.2f", frustrationScore.value)) | Rounded: Level \(frustrationScore.rounded) | Normalized: \(normStr)")
+    }
 
     print("\nUsage & Telemetry:")
     print("--------------------------------------------------------------")

@@ -339,6 +339,53 @@ struct JevFoundationModelsTests {
         #expect(response.content == .sales)
     }
 
+    @Test("End-to-end: LanguageModelSession.Response supports confidence routing and ScoreValue inspection")
+    func testEndToEndConfidenceAndNoulRouting() async throws {
+        let mockTransport = MockJevTransport { _ in
+            JevResponse(
+                model: "jev-simulated",
+                answers: [
+                    "isUrgent": JevAnswer(type: "noul", noul: 0.96),
+                    "department": JevAnswer(type: "choice", choice: "engineering", confidence: 0.92),
+                    "frustration": JevAnswer(
+                        type: "score",
+                        score: 1.0,
+                        confidence: 0.88,
+                        probabilities: ["0": 0.05, "1": 0.85, "2": 0.10],
+                        legend: ["0": "calm", "1": "frustrated", "2": "angry"]
+                    )
+                ],
+                usage: JevUsage(inputTokens: 80, outputTokens: 4)
+            )
+        }
+
+        let model = JevLanguageModel(apiKey: "mock-key", transport: mockTransport)
+        let session = LanguageModelSession(model: model)
+
+        let response = try await session.respond(to: "Database deadlocks causing customer checkout failures", generating: TestDecision.self)
+
+        // 1. Categorical confidence routing
+        #expect(response.decision(for: "department") == .auto)
+
+        // 2. Boolean Noul routing with undecided band handling
+        let urgentJudgement = response.judgement(for: "isUrgent")
+        #expect(urgentJudgement.decision == .auto)
+        #expect(urgentJudgement.answer == true)
+        #expect(urgentJudgement.decisiveness == 0.96)
+
+        // 3. ScoreValue inspection
+        let frustrationScore = try #require(response.scoreValue(for: "frustration"))
+        #expect(frustrationScore.rounded == 1)
+        #expect(frustrationScore.normalized == 0.5) // 1.0 / (3 - 1) = 0.5
+        #expect(frustrationScore.legend[1] == "frustrated")
+
+        // 4. Safe escalation for unanswered questions
+        #expect(response.decision(for: "unansweredQuestion") == .escalate)
+        let missingJudgement = response.judgement(for: "unansweredQuestion")
+        #expect(missingJudgement.decision == .escalate)
+        #expect(missingJudgement.answer == nil)
+    }
+
     @Test("JevExecutor rejects unstructured free-form text request without schema")
     func testExecutorRejectsUnstructuredRequest() async throws {
         let model = JevLanguageModel(apiKey: "mock-key")

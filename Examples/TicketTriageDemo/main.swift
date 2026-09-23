@@ -30,23 +30,43 @@ let ticket = loadTicketText()
 printDemoHeader(ticket: ticket)
 
 // =============================================================================
-// MARK: - 3. Native Apple Foundation Models + Jev Decision Call
+// MARK: - 3. Native Apple Foundation Models + Jev Resilience & Routing
 // =============================================================================
 
-let model = JevLanguageModel(apiKey: apiKey)
+// Configure resilient HTTP transport with backoff, jitter, and RFC 9110 Retry-After
+let retryPolicy = RetryPolicy(
+    maxAttempts: 3,
+    initialDelay: .milliseconds(250),
+    multiplier: 2.0,
+    jitter: 0.15,
+    retryableStatuses: [429, 529]
+)
+
+let model = JevLanguageModel(apiKey: apiKey, retryPolicy: retryPolicy)
 let session = LanguageModelSession(model: model)
 
 let startTime = CFAbsoluteTimeGetCurrent()
 
-let response = try await session.respond(
-    to: ticket,
-    generating: TicketTriage.self
-)
+do {
+    let response = try await session.respond(
+        to: ticket,
+        generating: TicketTriage.self
+    )
 
-let duration = (CFAbsoluteTimeGetCurrent() - startTime) * 1000
+    let duration = (CFAbsoluteTimeGetCurrent() - startTime) * 1000
 
-// =============================================================================
-// MARK: - 4. Display Results & Decision Calibration
-// =============================================================================
+    // =============================================================================
+    // MARK: - 4. Confidence & Noul Routing
+    // =============================================================================
 
-printDemoResults(response, durationMs: duration)
+    let routingPolicy = RoutingPolicy(escalateBelow: 0.60, autoAtOrAbove: 0.85)
+
+    printDemoResults(response, durationMs: duration, policy: routingPolicy)
+} catch let error as JevError {
+    print("\n❌ Decision Evaluation Failed with typed JevError:")
+    print("   \(error.localizedDescription)")
+    exit(1)
+} catch {
+    print("\n❌ Unexpected Error: \(error.localizedDescription)")
+    exit(1)
+}

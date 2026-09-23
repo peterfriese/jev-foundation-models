@@ -1,4 +1,5 @@
 import Foundation
+import JevFoundationModels
 
 /// Represents a saved or incoming article in the read-it-later / knowledge-management library.
 public struct Article: Identifiable, Sendable, Equatable, Hashable {
@@ -29,14 +30,19 @@ public enum MatchReason: Sendable, Equatable {
     case deterministic(rule: String)
 
     /// Layer 2: Semantic match via Jev Foundation Models (calibrated probability).
-    case semantic(probability: Double, threshold: Double)
+    case semantic(probability: Double, threshold: Double, judgement: NoulJudgement?)
+
+    public static func semantic(probability: Double, threshold: Double) -> MatchReason {
+        .semantic(probability: probability, threshold: threshold, judgement: nil)
+    }
 
     public var description: String {
         switch self {
         case .deterministic(let rule):
             return "Layer 1 (Deterministic: \(rule))"
-        case .semantic(let prob, let thresh):
-            return String(format: "Layer 2 (Jev System One: %.1f%% ≥ %.1f%% threshold)", prob * 100, thresh * 100)
+        case .semantic(let prob, let thresh, let judgement):
+            let actionStr = judgement.map { " [\($0.decision.rawValue.uppercased())]" } ?? ""
+            return String(format: "Layer 2 (Jev System One: %.1f%% ≥ %.1f%% threshold)%@", prob * 100, thresh * 100, actionStr)
         }
     }
 }

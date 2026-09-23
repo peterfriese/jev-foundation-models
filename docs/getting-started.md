@@ -86,3 +86,65 @@ if let confidence = response.metadata["confidence"] {
     print("Confidence: \(confidence)")
 }
 ```
+
+---
+
+## 5. Configuring Resilience (`RetryPolicy`)
+
+For production workloads, configure network retries for transient gateway overload (HTTP 429 / 529):
+
+```swift
+let retryPolicy = RetryPolicy(
+    maxAttempts: 3,
+    initialDelay: .milliseconds(250),
+    multiplier: 2.0,
+    jitter: 0.15,
+    retryableStatuses: [429, 529]
+)
+
+let jev = JevLanguageModel(apiKey: apiKey, retryPolicy: retryPolicy)
+let session = LanguageModelSession(model: jev)
+```
+
+If the API returns HTTP 429 with `Retry-After: 5`, `URLSessionTransport` automatically sleeps for the requested delay and retries, without dropping the request or failing your application flow.
+
+---
+
+## 6. Routing Decisions on Calibrated Confidence
+
+In System One models, the answer tells you *what* the model judged, but the calibrated confidence tells you **whether to act on it automatically**:
+
+```swift
+let policy = RoutingPolicy(escalateBelow: 0.60, autoAtOrAbove: 0.85)
+
+// (a) Categorical routing:
+switch response.decision(for: "department", policy: policy) {
+case .auto:
+    routeTicketDirectly(to: response.content.department)
+case .confirm:
+    suggestDepartmentToAgent(response.content.department)
+case .escalate:
+    assignToHumanSupervisor()
+}
+
+// (b) Boolean routing with undecided band (0.35...0.65):
+let judgement = response.judgement(for: "isUrgent", policy: policy)
+switch judgement.decision {
+case .auto:
+    if judgement.answer == true { dispatchP0Alert() }
+case .confirm:
+    flagForReview()
+case .escalate:
+    // Inside 0.35...0.65: model is genuinely undecided, judgement.answer is nil
+    assignToHumanSupervisor()
+}
+
+// (c) Continuous rubric score inspection:
+if let score = response.scoreValue(for: "frustration") {
+    print("Weighted: \(score.value) | Discrete Level: \(score.rounded) | Normalized: \(score.normalized ?? 0)")
+}
+```
+
+For more in-depth guidance, see:
+* [Confidence & Noul Routing Guide](confidence-routing.md)
+* [HTTP Resilience & Retries Guide](resilience-and-retries.md)
