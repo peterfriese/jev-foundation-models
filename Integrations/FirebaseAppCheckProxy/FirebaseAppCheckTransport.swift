@@ -53,11 +53,13 @@ public struct FirebaseAppCheckTransport: JevTransport, Sendable {
             tokenString = token.token
         }
         #else
-        let tokenString = ""
+        throw JevError.networkError("FirebaseAppCheck is not linked in this application target.")
         #endif
 
         // 2. Prepare HTTP request to the Cloud Function proxy
-        let targetURL = proxyEndpoint ?? endpoint
+        guard let targetURL = proxyEndpoint else {
+            throw JevError.networkError("FirebaseAppCheckTransport requires an explicit proxyEndpoint pointing to your authenticated Cloud Function reverse proxy.")
+        }
         var urlRequest = URLRequest(url: targetURL)
         urlRequest.httpMethod = "POST"
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -88,5 +90,8 @@ public struct FirebaseAppCheckTransport: JevTransport, Sendable {
         } catch {
             throw JevError.decodingError("Failed to decode JevResponse from proxy: \(error.localizedDescription)")
         }
+        #else
+        throw JevError.networkError("FirebaseAppCheck is not linked in this target. To use FirebaseAppCheckTransport, link the FirebaseAppCheck SDK.")
+        #endif
     }
 }

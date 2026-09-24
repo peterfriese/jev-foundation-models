@@ -92,6 +92,7 @@ const typesafeApiKey = defineSecret("TYPESAFE_API_KEY");
 export const systemone = onRequest(
   {
     cors: false,
+    enforceAppCheck: true, // Rejects unverified traffic at Google Cloud edge
     secrets: [typesafeApiKey],
     // minInstances: 1 keeps a container warm 24/7 to eliminate ~500ms-1.5s cold starts
     minInstances: 1,
@@ -203,7 +204,7 @@ struct MyApp: App {
 
 ### Step 4: Create the `FirebaseAppCheckTransport`
 
-> **Architectural Note:** `JevFoundationModels` maintains a strict mandate of **Zero External Third-Party Runtime Dependencies**. Because Swift Package Manager isolates package targets during compilation, vendor SDKs like Firebase cannot be conditionally imported via `#if canImport` from a consuming app without forcing all library users to resolve the entire `firebase-ios-sdk` dependency graph. Therefore, `FirebaseAppCheckTransport.swift` is distributed as a reference drop-in file that compiles natively inside your application target where Firebase is already linked. For technical details, see [Tech Note 0004 — SPM Dependency Isolation & Decoupling Vendor Transports](../tech-notes/0004-spm-dependency-isolation-and-vendor-transports.md).
+> **Architectural Note:** `JevFoundationModels` maintains a strict mandate of **Zero External Third-Party Runtime Dependencies**. Because Swift Package Manager isolates package targets during compilation, vendor SDKs like Firebase cannot be conditionally imported via `#if canImport` from a consuming app without forcing all library users to resolve the entire `firebase-ios-sdk` dependency graph. Therefore, `FirebaseAppCheckTransport.swift` is distributed as a reference drop-in file that compiles natively inside your application target where Firebase is already linked. For technical details, see [Tech Note 0005 — SPM Dependency Isolation & Decoupling Vendor Transports](../tech-notes/0005-spm-dependency-isolation-and-vendor-transports.md).
 
 Copy `FirebaseAppCheckTransport.swift` from `Integrations/FirebaseAppCheckProxy/` into your app:
 
@@ -256,7 +257,9 @@ public struct FirebaseAppCheckTransport: JevTransport, Sendable {
         }
 
         // 2. Prepare HTTP request directed to your Firebase Cloud Function
-        let targetURL = proxyEndpoint ?? endpoint
+        guard let targetURL = proxyEndpoint else {
+            throw JevError.networkError("FirebaseAppCheckTransport requires an explicit proxyEndpoint pointing to your authenticated Cloud Function reverse proxy.")
+        }
         var urlRequest = URLRequest(url: targetURL)
         urlRequest.httpMethod = "POST"
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")

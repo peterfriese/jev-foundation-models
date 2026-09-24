@@ -11,15 +11,17 @@ const typesafeApiKey = defineSecret("TYPESAFE_API_KEY");
 
 /**
  * A Firebase Cloud Function (2nd Gen) reverse proxy that:
- * 1. Enforces Firebase App Check (Apple App Attest / DeviceCheck).
+ * 1. Enforces Firebase App Check at platform ingress (Apple App Attest / DeviceCheck).
  * 2. Optionally consumes limited-use tokens for replay protection (when CONSUME_APP_CHECK="true").
- * 3. Injects the upstream TYPESAFE_API_KEY from Google Secret Manager.
- * 4. Forwards requests to TypeSafe AI's Jev System One evaluation endpoint with a timeout.
- * 5. Preserves upstream status codes and payload bodies for client decoding.
+ * 3. Validates incoming payload shape to prevent unauthorized traffic from reaching upstream.
+ * 4. Injects the upstream TYPESAFE_API_KEY from Google Secret Manager.
+ * 5. Forwards requests to TypeSafe AI's Jev System One evaluation endpoint with a timeout.
+ * 6. Preserves upstream status codes and payload bodies for client decoding.
  */
 export const systemone = onRequest(
   {
     cors: false,
+    enforceAppCheck: true, // Rejects unverified traffic at Google Cloud edge
     secrets: [typesafeApiKey],
     // Performance tuning:
     // minInstances: 1 keeps a container warm 24/7 to eliminate ~500ms-1.5s cold starts.
@@ -35,22 +37,26 @@ export const systemone = onRequest(
       return;
     }
 
-    // App Check Token Verification & Optional Replay Protection
+    // Optional Limited-Use Token Replay Protection
     const appCheckToken = req.header("X-Firebase-AppCheck");
-    if (!appCheckToken) {
-      res.status(401).json({ error: "Unauthorized: Missing X-Firebase-AppCheck header" });
-      return;
-    }
-
     const consume = process.env.CONSUME_APP_CHECK === "true";
-    try {
-      const claims = await getAppCheck().verifyToken(appCheckToken, { consume });
-      if (claims.alreadyConsumed) {
-        res.status(401).json({ error: "Unauthorized: App Check token has already been consumed" });
+    if (consume && appCheckToken) {
+      try {
+        const claims = await getAppCheck().verifyToken(appCheckToken, { consume: true });
+        if (claims.alreadyConsumed) {
+          res.status(401).json({ error: "Unauthorized: App Check token has already been consumed" });
+          return;
+        }
+      } catch (error: any) {
+        res.status(401).json({ error: `Unauthorized: Invalid App Check token (${error.message ?? error})` });
         return;
       }
-    } catch (error: any) {
-      res.status(401).json({ error: `Unauthorized: Invalid App Check token (${error.message ?? error})` });
+    }
+
+    // Validate request payload structure before forwarding to billable upstream
+    const { state, questions } = req.body ?? {};
+    if (!state || typeof state !== "string" || !questions || typeof questions !== "object" || Array.isArray(questions)) {
+      res.status(400).json({ error: "Bad Request: Payload must include a 'state' string and a 'questions' object" });
       return;
     }
 
