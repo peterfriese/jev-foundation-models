@@ -1,22 +1,27 @@
 import Foundation
 
-// MARK: - Jev Request Payloads
+// MARK: - System One Request Payloads
 
-public struct JevRequest: Codable, Sendable, Equatable {
+/// A request payload conforming to the System One decision evaluation schema.
+public struct SystemOneRequest: Codable, Sendable, Equatable {
     public let state: String
     public let model: String
-    public let questions: [String: JevQuestion]
+    public let questions: [String: SystemOneQuestion]
 
-    public init(state: String, model: String = "jev-latest", questions: [String: JevQuestion]) {
+    public init(state: String, model: String = "systemone-default", questions: [String: SystemOneQuestion]) {
         self.state = state
         self.model = model
         self.questions = questions
     }
 }
 
-public enum JevQuestion: Codable, Sendable, Equatable {
+/// A strongly-typed question evaluated in a single forward pass by a System One decision model.
+public enum SystemOneQuestion: Codable, Sendable, Equatable {
+    /// Evaluates the probability of truth (0.0 to 1.0) for a statement.
     case noul(instructions: String)
+    /// Evaluates discrete categorical selection among candidate options.
     case choice(instructions: String, criteria: [String: String])
+    /// Evaluates an ordinal rubric score across numeric/integer levels.
     case score(instructions: String, criteria: [String])
 
     private enum CodingKeys: String, CodingKey {
@@ -54,28 +59,44 @@ public enum JevQuestion: Codable, Sendable, Equatable {
             let criteria = try container.decode([String].self, forKey: .criteria)
             self = .score(instructions: instructions, criteria: criteria)
         default:
-            throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unknown primitive type: \(type)")
+            throw DecodingError.dataCorruptedError(
+                forKey: .type,
+                in: container,
+                debugDescription: "Unknown primitive type: \(type)"
+            )
         }
     }
 }
 
-// MARK: - Jev Response Payloads
+// MARK: - System One Response Payloads
 
-public struct JevResponse: Codable, Sendable, Equatable {
+/// The response payload containing calibrated answers and telemetry from a System One model.
+public struct SystemOneResponse: Codable, Sendable, Equatable {
     public let model: String
-    public let answers: [String: JevAnswer]
-    public let usage: JevUsage?
+    public let answers: [String: SystemOneAnswer]
+    public let usage: SystemOneUsage?
+    /// Server-reported inference duration in milliseconds (if provided by gateway/server).
     public var serverDurationMs: Double?
+    /// Client-side HTTP/transport round-trip latency in milliseconds.
+    public var transportDurationMs: Double?
 
-    public init(model: String, answers: [String: JevAnswer], usage: JevUsage? = nil, serverDurationMs: Double? = nil) {
+    public init(
+        model: String,
+        answers: [String: SystemOneAnswer],
+        usage: SystemOneUsage? = nil,
+        serverDurationMs: Double? = nil,
+        transportDurationMs: Double? = nil
+    ) {
         self.model = model
         self.answers = answers
         self.usage = usage
         self.serverDurationMs = serverDurationMs
+        self.transportDurationMs = transportDurationMs
     }
 }
 
-public struct JevUsage: Codable, Sendable, Equatable {
+/// Token usage statistics for a System One evaluation.
+public struct SystemOneUsage: Codable, Sendable, Equatable {
     public let inputTokens: Int
     public let outputTokens: Int
 
@@ -90,7 +111,8 @@ public struct JevUsage: Codable, Sendable, Equatable {
     }
 }
 
-public struct JevAnswer: Codable, Sendable, Equatable {
+/// A calibrated answer for a single System One question.
+public struct SystemOneAnswer: Codable, Sendable, Equatable {
     public let type: String
     public let noul: Double?
     public let choice: String?
@@ -127,7 +149,7 @@ public struct JevAnswer: Codable, Sendable, Equatable {
         scoreValue(minimum: nil, maximum: nil, isInteger: false)
     }
 
-    func scoreValue(minimum: Double?, maximum: Double?, isInteger: Bool) -> ScoreValue? {
+    public func scoreValue(minimum: Double?, maximum: Double?, isInteger: Bool) -> ScoreValue? {
         guard let score, score.isFinite else { return nil }
         let conf = confidence ?? 1.0
         guard conf.isFinite, (0.0...1.0).contains(conf) else { return nil }

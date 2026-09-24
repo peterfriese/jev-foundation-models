@@ -1,4 +1,4 @@
-# 0004 — SPM Dependency Isolation & Decoupling Vendor Transports
+# 0005 — SPM Dependency Isolation & Decoupling Vendor Transports
 
 - **Date**: 2026-09-22
 - **Author**: Peter Friese

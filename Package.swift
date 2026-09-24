@@ -2,13 +2,29 @@
 import PackageDescription
 
 let package = Package(
-    name: "jev-foundation-models",
+    name: "SystemOneFoundationModels",
     platforms: [
         .iOS("27.0"),
         .macOS("27.0"),
         .visionOS("27.0")
     ],
     products: [
+        .library(
+            name: "SystemOneCore",
+            targets: ["SystemOneCore"]
+        ),
+        .library(
+            name: "SystemOneFoundationModels",
+            targets: ["SystemOneCore", "LayaFoundationModels", "LayaOnDevice", "JevFoundationModels"]
+        ),
+        .library(
+            name: "LayaFoundationModels",
+            targets: ["LayaFoundationModels"]
+        ),
+        .library(
+            name: "LayaOnDevice",
+            targets: ["LayaOnDevice"]
+        ),
         .library(
             name: "JevFoundationModels",
             targets: ["JevFoundationModels"]
@@ -24,11 +40,36 @@ let package = Package(
         .executable(
             name: "file-organizer-demo",
             targets: ["FileOrganizerDemo"]
+        ),
+        .executable(
+            name: "laya-demo",
+            targets: ["LayaDemo"]
         )
     ],
     targets: [
         .target(
+            name: "SystemOneCore",
+            swiftSettings: [
+                .enableUpcomingFeature("StrictConcurrency")
+            ]
+        ),
+        .target(
+            name: "LayaFoundationModels",
+            dependencies: ["SystemOneCore"],
+            swiftSettings: [
+                .enableUpcomingFeature("StrictConcurrency")
+            ]
+        ),
+        .target(
+            name: "LayaOnDevice",
+            dependencies: ["SystemOneCore"],
+            swiftSettings: [
+                .enableUpcomingFeature("StrictConcurrency")
+            ]
+        ),
+        .target(
             name: "JevFoundationModels",
+            dependencies: ["SystemOneCore"],
             swiftSettings: [
                 .enableUpcomingFeature("StrictConcurrency")
             ]
@@ -51,9 +92,20 @@ let package = Package(
             path: "Examples/FileOrganizerDemo",
             exclude: ["README.md"]
         ),
+        .executableTarget(
+            name: "LayaDemo",
+            dependencies: ["LayaFoundationModels"],
+            path: "Examples/LayaDemo",
+            exclude: ["README.md"]
+        ),
         .testTarget(
             name: "JevFoundationModelsTests",
-            dependencies: ["JevFoundationModels"]
+            dependencies: [
+                "JevFoundationModels",
+                "SystemOneCore",
+                "LayaFoundationModels",
+                "LayaOnDevice"
+            ]
         )
     ]
 )
