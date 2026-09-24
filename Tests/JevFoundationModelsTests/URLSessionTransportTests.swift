@@ -4,7 +4,7 @@ import Foundation
 
 // MARK: - Mock URLProtocol for Offline Deterministic Testing
 
-final class MockHTTPProtocol: URLProtocol, @unchecked Sendable {
+final class MockHTTPProtocol: URLProtocol {
     private static let lock = NSLock()
     nonisolated(unsafe) private static var _responseQueue: [Result<(statusCode: Int, headers: [String: String], body: Data), any Error>] = []
     nonisolated(unsafe) private static var _requestCount: Int = 0
