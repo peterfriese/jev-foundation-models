@@ -66,11 +66,7 @@ public final class LayaCoreMLEngine: Sendable {
 
         for (qid, question) in request.questions {
             let sequence = try sequenceBuilder.buildSequence(state: request.state, question: question)
-            guard sequence.markerPositions.count <= maxOptions else {
-                throw SystemOneError.modelExecutionError(
-                    "Question '\(qid)' produced \(sequence.markerPositions.count) options, exceeding configured maxOptions=\(maxOptions)."
-                )
-            }
+            try validateOptionCount(sequence.markerPositions.count, questionID: qid)
             totalTokens += sequence.inputIds.count
 
             let logits: [Double]
@@ -101,11 +97,7 @@ public final class LayaCoreMLEngine: Sendable {
     private func executeCoreML(model: MLModel, sequence: FormattedQuestionSequence) throws -> [Double] {
         let seqLen = sequence.inputIds.count
         let k = sequence.markerPositions.count
-        guard k <= maxOptions else {
-            throw SystemOneError.modelExecutionError(
-                "Question produced \(k) options, exceeding configured maxOptions=\(maxOptions)."
-            )
-        }
+        try validateOptionCount(k)
 
         // 1. Create input multiarrays
         let inputIdsArr = try MLMultiArray(shape: [1, NSNumber(value: seqLen)], dataType: .int32)
@@ -151,6 +143,15 @@ public final class LayaCoreMLEngine: Sendable {
             resultLogits.append(logitsFeature[[0, NSNumber(value: i)]].doubleValue)
         }
         return resultLogits
+    }
+
+    private func validateOptionCount(_ count: Int, questionID: String? = nil) throws {
+        guard count <= maxOptions else {
+            let questionFragment = questionID.map { "Question '\($0)' " } ?? "Question "
+            throw SystemOneError.modelExecutionError(
+                "\(questionFragment)produced \(count) options, exceeding configured maxOptions=\(maxOptions)."
+            )
+        }
     }
 
     // MARK: - Answer Decoding
