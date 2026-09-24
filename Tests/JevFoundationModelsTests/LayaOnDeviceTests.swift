@@ -186,4 +186,34 @@ struct LayaOnDeviceTests {
         #expect(response.content.severity >= 2)
         #expect(response.probability(for: "isImpacting") != nil)
     }
+
+    @Test("LayaCoreMLEngine throws typed error when option count exceeds maxOptions")
+    func testLayaCoreMLEngineOptionOverflow() async throws {
+        let tokenizer = ModernBERTTokenizer.defaultTokenizer()
+        let engine = LayaCoreMLEngine(tokenizer: tokenizer, maxOptions: 2) { _ in
+            [1.0, 1.0]
+        }
+
+        let request = SystemOneRequest(
+            state: "State",
+            questions: [
+                "incidentType": .choice(
+                    instructions: "What incident type?",
+                    criteria: ["database": "DB", "network": "Net", "auth": "Auth"]
+                )
+            ]
+        )
+
+        do {
+            _ = try await engine.predict(request: request)
+            Issue.record("Expected option overflow to throw")
+        } catch let error as SystemOneError {
+            switch error {
+            case .modelExecutionError(let message):
+                #expect(message.contains("maxOptions=2"))
+            default:
+                Issue.record("Expected modelExecutionError, got \(error)")
+            }
+        }
+    }
 }
