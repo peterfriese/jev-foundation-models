@@ -1,7 +1,7 @@
 # Xcode & Swift Package Manager
 .build/
 .swiftpm/
-Packages/
+/Packages/
 Package.pins
 Package.resolved
 DerivedData/
