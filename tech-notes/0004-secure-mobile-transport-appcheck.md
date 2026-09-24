@@ -1,4 +1,4 @@
-# 0003 — Secure Mobile Transport with Firebase App Check & Apple App Attest
+# 0004 — Secure Mobile Transport with Firebase App Check & Apple App Attest
 
 - **Date**: 2026-09-21
 - **Author**: Peter Friese

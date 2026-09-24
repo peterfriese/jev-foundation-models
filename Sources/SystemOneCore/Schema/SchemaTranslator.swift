@@ -40,40 +40,40 @@ public enum SchemaRootLayout: Sendable, Equatable {
     case score(minimum: Double, maximum: Double, isInteger: Bool, questionKey: String)
 }
 
-/// The result of translating an Apple `GenerationSchema` into Jev questions and decoding layout.
+/// The result of translating an Apple `GenerationSchema` into System One questions and decoding layout.
 public struct SchemaTranslation: Sendable, Equatable {
     public let layout: SchemaRootLayout
-    public let questions: [String: JevQuestion]
+    public let questions: [String: SystemOneQuestion]
 
-    public init(layout: SchemaRootLayout, questions: [String: JevQuestion]) {
+    public init(layout: SchemaRootLayout, questions: [String: SystemOneQuestion]) {
         self.layout = layout
         self.questions = questions
     }
 }
 
-/// Translates Apple Foundation Models `GenerationSchema` instances into TypeSafe AI Jev decision questions.
+/// Translates Apple Foundation Models `GenerationSchema` instances into System One decision questions.
 public struct SchemaTranslator: Sendable {
     public init() {}
 
-    /// Translates a `GenerationSchema` into a `SchemaTranslation` containing Jev questions and structural layout.
+    /// Translates a `GenerationSchema` into a `SchemaTranslation` containing System One questions and structural layout.
     public func translate(_ schema: GenerationSchema) throws -> SchemaTranslation {
         let schemaData: Data
         do {
             schemaData = try JSONEncoder().encode(schema)
         } catch {
-            throw JevError.invalidSchema("Failed to encode GenerationSchema to JSON: \(error.localizedDescription)")
+            throw SystemOneError.invalidSchema("Failed to encode GenerationSchema to JSON: \(error.localizedDescription)")
         }
 
         guard let jsonObject = try? JSONSerialization.jsonObject(with: schemaData) as? [String: Any] else {
-            throw JevError.invalidSchema("GenerationSchema JSON representation is not a valid dictionary.")
+            throw SystemOneError.invalidSchema("GenerationSchema JSON representation is not a valid dictionary.")
         }
 
         let defs = jsonObject["$defs"] as? [String: [String: Any]] ?? [:]
         return try parseRoot(json: jsonObject, defs: defs)
     }
 
-    /// Convenience method to translate a `GenerationSchema` directly to Jev questions dictionary.
-    public func translateToQuestions(_ schema: GenerationSchema) throws -> [String: JevQuestion] {
+    /// Convenience method to translate a `GenerationSchema` directly to System One questions dictionary.
+    public func translateToQuestions(_ schema: GenerationSchema) throws -> [String: SystemOneQuestion] {
         try translate(schema).questions
     }
 
@@ -92,7 +92,7 @@ public struct SchemaTranslator: Sendable {
             for c in enumCases {
                 criteria[c] = c
             }
-            let question = JevQuestion.choice(instructions: instructions, criteria: criteria)
+            let question = SystemOneQuestion.choice(instructions: instructions, criteria: criteria)
             return SchemaTranslation(
                 layout: .choice(options: enumCases, questionKey: questionKey),
                 questions: [questionKey: question]
@@ -103,7 +103,7 @@ public struct SchemaTranslator: Sendable {
         if rawType == "boolean" {
             let questionKey = "root"
             let instructions = description ?? title
-            let question = JevQuestion.noul(instructions: instructions)
+            let question = SystemOneQuestion.noul(instructions: instructions)
             return SchemaTranslation(
                 layout: .boolean(questionKey: questionKey),
                 questions: [questionKey: question]
@@ -118,7 +118,7 @@ public struct SchemaTranslator: Sendable {
             let instructions = description ?? title
             let isInteger = (rawType == "integer")
             let criteria = generateScoreCriteria(min: min, max: max, isInteger: isInteger)
-            let question = JevQuestion.score(instructions: instructions, criteria: criteria)
+            let question = SystemOneQuestion.score(instructions: instructions, criteria: criteria)
             return SchemaTranslation(
                 layout: .score(minimum: min, maximum: max, isInteger: isInteger, questionKey: questionKey),
                 questions: [questionKey: question]
@@ -127,18 +127,22 @@ public struct SchemaTranslator: Sendable {
 
         // Case 4: Root is an Object (the standard @Generable struct)
         guard rawType == "object" || rawType == nil else {
-            throw JevError.invalidSchema("Unsupported root schema type: '\(rawType ?? "unknown")'. Jev requires an object or bounded decision primitive.")
+            throw SystemOneError.invalidSchema(
+                "Unsupported root schema type: '\(rawType ?? "unknown")'. System One requires an object or bounded decision primitive."
+            )
         }
 
         guard let properties = json["properties"] as? [String: Any], !properties.isEmpty else {
-            throw JevError.invalidSchema("Schema object contains no properties. At least one @Generable property is required.")
+            throw SystemOneError.invalidSchema(
+                "Schema object contains no properties. At least one @Generable property is required."
+            )
         }
 
         let requiredList = Set((json["required"] as? [String]) ?? [])
         let orderList = (json["x-order"] as? [String]) ?? Array(properties.keys).sorted()
 
         var propertyDescriptors: [String: SchemaPropertyDescriptor] = [:]
-        var questions: [String: JevQuestion] = [:]
+        var questions: [String: SystemOneQuestion] = [:]
 
         for (propName, propRawValue) in properties {
             let resolved = try resolveProperty(raw: propRawValue, defs: defs)
@@ -164,17 +168,17 @@ public struct SchemaTranslator: Sendable {
 
     private func resolveProperty(raw: Any, defs: [String: [String: Any]]) throws -> [String: Any] {
         guard var dict = raw as? [String: Any] else {
-            throw JevError.invalidSchema("Property definition must be a JSON object.")
+            throw SystemOneError.invalidSchema("Property definition must be a JSON object.")
         }
 
         if let ref = dict["$ref"] as? String {
             let refPrefix = "#/$defs/"
             guard ref.hasPrefix(refPrefix) else {
-                throw JevError.invalidSchema("Unsupported $ref format: '\(ref)'. Only internal #/$defs/ references are supported.")
+                throw SystemOneError.invalidSchema("Unsupported $ref format: '\(ref)'. Only internal #/$defs/ references are supported.")
             }
             let defName = String(ref.dropFirst(refPrefix.count))
             guard let referenced = defs[defName] else {
-                throw JevError.invalidSchema("Referenced definition '\(defName)' was not found in $defs.")
+                throw SystemOneError.invalidSchema("Referenced definition '\(defName)' was not found in $defs.")
             }
             // Merge referenced dict with property overrides (like description)
             for (k, v) in referenced where dict[k] == nil {
@@ -201,7 +205,7 @@ public struct SchemaTranslator: Sendable {
         propertyDict: [String: Any],
         isRequired: Bool,
         defs: [String: [String: Any]]
-    ) throws -> (SchemaPropertyDescriptor, [String: JevQuestion]) {
+    ) throws -> (SchemaPropertyDescriptor, [String: SystemOneQuestion]) {
         let type = propertyDict["type"] as? String
         let description = propertyDict["description"] as? String
         let instructions = description ?? formatInstructions(from: name)
@@ -215,7 +219,7 @@ public struct SchemaTranslator: Sendable {
                 instructions: instructions,
                 isRequired: isRequired
             )
-            let question = JevQuestion.noul(instructions: instructions)
+            let question = SystemOneQuestion.noul(instructions: instructions)
             return (descriptor, [path: question])
         }
 
@@ -232,7 +236,7 @@ public struct SchemaTranslator: Sendable {
                 instructions: instructions,
                 isRequired: isRequired
             )
-            let question = JevQuestion.choice(instructions: instructions, criteria: criteria)
+            let question = SystemOneQuestion.choice(instructions: instructions, criteria: criteria)
             return (descriptor, [path: question])
         }
 
@@ -249,14 +253,14 @@ public struct SchemaTranslator: Sendable {
                 instructions: instructions,
                 isRequired: isRequired
             )
-            let question = JevQuestion.score(instructions: instructions, criteria: criteria)
+            let question = SystemOneQuestion.score(instructions: instructions, criteria: criteria)
             return (descriptor, [path: question])
         }
 
         // 4. Nested Object -> recursively translate
         if type == "object", let nestedProperties = propertyDict["properties"] as? [String: Any] {
             var nestedDescriptors: [String: SchemaPropertyDescriptor] = [:]
-            var nestedQuestions: [String: JevQuestion] = [:]
+            var nestedQuestions: [String: SystemOneQuestion] = [:]
             let nestedRequired = Set((propertyDict["required"] as? [String]) ?? [])
 
             for (childName, childRaw) in nestedProperties {
@@ -288,13 +292,13 @@ public struct SchemaTranslator: Sendable {
 
         // 5. Unconstrained String without enum -> reject early
         if type == "string" {
-            throw JevError.invalidSchema(
-                "Property '\(name)' is an unconstrained String. Jev is a System One decision model and does not generate free-form text. Use an enum, Bool, or @Guide(.range(...)) score."
+            throw SystemOneError.invalidSchema(
+                "Property '\(name)' is an unconstrained String. System One is a decision model and does not generate free-form text. Use an enum, Bool, or @Guide(.range(...)) score."
             )
         }
 
-        throw JevError.invalidSchema(
-            "Unsupported type '\(type ?? "unknown")' for property '\(name)'. Jev supports Bool, String enums, and numerical ranges."
+        throw SystemOneError.invalidSchema(
+            "Unsupported type '\(type ?? "unknown")' for property '\(name)'. System One supports Bool, String enums, and numerical ranges."
         )
     }
 
@@ -310,7 +314,6 @@ public struct SchemaTranslator: Sendable {
     }
 
     private func formatInstructions(from propertyName: String) -> String {
-        // e.g. "isUrgent" -> "Is urgent", "frustrationScore" -> "Frustration score"
         var result = ""
         for (i, char) in propertyName.enumerated() {
             if i == 0 {

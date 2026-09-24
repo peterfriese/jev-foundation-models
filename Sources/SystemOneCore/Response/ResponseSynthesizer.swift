@@ -1,16 +1,12 @@
 import Foundation
 
-/// Synthesizes Jev System One answers into valid JSON payloads matching `@Generable` shapes.
+/// Synthesizes System One answers into valid JSON payloads matching `@Generable` shapes.
 public struct ResponseSynthesizer: Sendable {
     public init() {}
 
     /// Synthesizes the text payload to be delivered through `LanguageModelExecutorGenerationChannel`.
-    ///
-    /// For `@Generable struct` (object root), this returns a canonical JSON string.
-    /// For `@Generable enum` (choice root), this returns the raw unquoted enum case string
-    /// as expected by Apple's Foundation Models internal decoder.
     public func synthesize(
-        answers: [String: JevAnswer],
+        answers: [String: SystemOneAnswer],
         layout: SchemaRootLayout
     ) throws -> String {
         switch layout {
@@ -21,16 +17,15 @@ public struct ResponseSynthesizer: Sendable {
                 options: [.sortedKeys, .fragmentsAllowed]
             )
             guard let jsonString = String(data: data, encoding: .utf8) else {
-                throw JevError.decodingError("Failed to convert synthesized dictionary to UTF-8 JSON string.")
+                throw SystemOneError.decodingError("Failed to convert synthesized dictionary to UTF-8 JSON string.")
             }
             return jsonString
 
         case .choice(let options, let questionKey):
             let answer = answers[questionKey]
             guard let choice = answer?.choice ?? options.first else {
-                throw JevError.decodingError("No choice answer returned for root enum question '\(questionKey)'.")
+                throw SystemOneError.decodingError("No choice answer returned for root enum question '\(questionKey)'.")
             }
-            // Root enum expects bare case string for FoundationModels decoding
             return choice
 
         case .boolean(let questionKey):
@@ -56,8 +51,8 @@ public struct ResponseSynthesizer: Sendable {
         }
     }
 
-    /// Extracts calibrated probability distributions from Jev answers into a JSON string.
-    public func extractProbabilitiesJSON(from answers: [String: JevAnswer]) -> String? {
+    /// Extracts calibrated probability distributions from System One answers into a JSON string.
+    public func extractProbabilitiesJSON(from answers: [String: SystemOneAnswer]) -> String? {
         var probs: [String: Any] = [:]
         for (key, answer) in answers {
             if let distribution = answer.probabilities {
@@ -77,14 +72,13 @@ public struct ResponseSynthesizer: Sendable {
         return json
     }
 
-    /// Extracts confidence scores from Jev answers into a JSON string.
-    public func extractConfidenceJSON(from answers: [String: JevAnswer]) -> String? {
+    /// Extracts confidence scores from System One answers into a JSON string.
+    public func extractConfidenceJSON(from answers: [String: SystemOneAnswer]) -> String? {
         var confs: [String: Double] = [:]
         for (key, answer) in answers {
             if let confidence = answer.confidence {
                 confs[key] = confidence
             } else if let noul = answer.noul {
-                // Confidence for noul reflects distance from 0.5 maximum uncertainty
                 confs[key] = abs(noul - 0.5) * 2.0
             }
         }
@@ -96,8 +90,8 @@ public struct ResponseSynthesizer: Sendable {
         return json
     }
 
-    /// Extracts typed ScoreValue models from Jev answers into a JSON string.
-    public func extractScoresJSON(from answers: [String: JevAnswer], layout: SchemaRootLayout? = nil) -> String? {
+    /// Extracts typed ScoreValue models from System One answers into a JSON string.
+    public func extractScoresJSON(from answers: [String: SystemOneAnswer], layout: SchemaRootLayout? = nil) -> String? {
         var scores: [String: ScoreValue] = [:]
         let scoreMetadata = layout.map(scoreQuestionMetadata) ?? [:]
         for (key, answer) in answers {
@@ -125,7 +119,7 @@ public struct ResponseSynthesizer: Sendable {
 
     private func buildObjectDictionary(
         properties: [String: SchemaPropertyDescriptor],
-        answers: [String: JevAnswer]
+        answers: [String: SystemOneAnswer]
     ) throws -> [String: Any] {
         var dictionary: [String: Any] = [:]
 
@@ -133,7 +127,6 @@ public struct ResponseSynthesizer: Sendable {
             if let value = extractPropertyValue(descriptor: descriptor, answers: answers) {
                 dictionary[name] = value
             } else if descriptor.isRequired {
-                // Provide a safe default for required fields if answer was omitted
                 dictionary[name] = defaultFallbackValue(for: descriptor)
             }
         }
@@ -143,7 +136,7 @@ public struct ResponseSynthesizer: Sendable {
 
     private func extractPropertyValue(
         descriptor: SchemaPropertyDescriptor,
-        answers: [String: JevAnswer]
+        answers: [String: SystemOneAnswer]
     ) -> Any? {
         let answer = answers[descriptor.questionKey]
 
@@ -181,7 +174,7 @@ public struct ResponseSynthesizer: Sendable {
     }
 
     private func computeScoreValue(
-        answer: JevAnswer?,
+        answer: SystemOneAnswer?,
         min: Double,
         max: Double,
         isInteger: Bool
