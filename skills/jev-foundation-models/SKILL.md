@@ -5,11 +5,12 @@ description: >-
   Evaluate TypeSafe Jev System One decision models natively through Apple's Foundation
   Models framework in Swift 6. Use when building iOS 27+, macOS 27+, or visionOS 27+
   apps that evaluate strongly-typed @Generable structs and enums using LanguageModelSession,
-  accessing calibrated decision probabilities, configuring JevTransport for App Check,
-  or writing offline unit tests with MockJevTransport.
+  implementing confidence routing (RoutingPolicy, NoulJudgement, ScoreValue), configuring
+  resilient network retries (RetryPolicy), securing mobile traffic via App Check proxy transports,
+  or writing deterministic offline unit tests with MockJevTransport.
 metadata:
   author: peterfriese
-  version: "1.0"
+  version: "1.1"
 ---
 
 # Jev Foundation Models Bridge
@@ -24,7 +25,9 @@ Jev is a **System One decision model**, not a text-generating LLM. It evaluates 
 
 - **Prompt $\to$ Application State**: The text passed to `session.respond(to:)` represents current application context (support tickets, sensor readings, transaction logs, user inputs, or parsed documents).
 - **`@Generable` Type $\to$ Decision Questions**: The struct or enum defines the typed questions being asked over that state.
-- **Output $\to$ Calibrated Decisions & Telemetry**: Strongly typed values delivered instantly (single-frame delivery), with exact probability distributions accessible via response metadata extensions.
+- **Dual Signal Output**:
+  1. **The Answer**: *What* the model judged (`response.content` containing typed enum choices, booleans, or rubric scores).
+  2. **The Calibrated Confidence / Probability**: *Whether* to automate the action (`response.judgement(...)`, `response.decision(...)`, `response.scoreValue(...)`).
 
 ---
 
@@ -32,13 +35,13 @@ Jev is a **System One decision model**, not a text-generating LLM. It evaluates 
 
 `SchemaTranslator` maps Apple `@Generable` types directly to Jev decision primitives. Follow these mapping rules strictly:
 
-| Swift Type & Annotations | Jev Primitive | Behavior / Output |
-| :--- | :--- | :--- |
-| `Bool` | **`noul`** | Calibrated probability of truth (0.0 – 1.0). Decodes to Swift `true` / `false`. |
-| `enum: String` | **`choice`** | Discrete categorical selection among defined enum cases. |
-| `Int` or `Double` + `@Guide(.range(min...max))` | **`score`** | Ordinal rubric scoring mapped to integer/numeric levels. |
-| `@Guide(description: "...")` | **`instructions`** | Natural language instructions steering Jev's judgment. |
-| Nested `@Generable struct` | **`nested questions`** | Evaluates hierarchical sub-properties concurrently. |
+| Swift Type & Annotations | Jev Primitive | Question Key Convention | Behavior / Output |
+| :--- | :--- | :--- | :--- |
+| `Bool` | **`noul`** | Field name (e.g. `"isUrgent"`) or `"root"` | Calibrated probability of truth ($0.0 \dots 1.0$). Decodes to Swift `Bool`. |
+| `enum: String` | **`choice`** | Field name (e.g. `"department"`) or `"choice"` | Discrete categorical selection among defined enum cases. |
+| `Int` or `Double` + `@Guide(.range(min...max))` | **`score`** | Field name (e.g. `"frustrationLevel"`) or `"root"` | Ordinal rubric scoring mapped to integer/numeric levels with continuous weighting. |
+| `@Guide(description: "...")` | **`instructions`** | N/A | Natural language instructions steering Jev's judgment. |
+| Nested `@Generable struct` | **`nested questions`** | Dot-notation (e.g. `"metadata.priority"`) | Evaluates hierarchical sub-properties concurrently. |
 
 ### Negative Constraints (Strictly Forbidden)
 - ❌ **No unconstrained `String` properties**: Jev does not generate free-form text. A `String` property without enum choices throws `JevError.invalidSchema`.
@@ -52,14 +55,14 @@ Jev is a **System One decision model**, not a text-generating LLM. It evaluates 
 import FoundationModels
 
 @Generable
-enum SupportDepartment: String {
+enum SupportDepartment: String, Sendable {
     case billing
     case technicalSupport
     case sales
 }
 
 @Generable
-struct TriageDecision {
+struct TriageDecision: Sendable {
     @Guide(description: "Is this customer inquiry urgent or blocking critical business?")
     var isUrgent: Bool
 
@@ -73,7 +76,7 @@ struct TriageDecision {
 
 ---
 
-## 3. Canonical Call-Site & Telemetry Access
+## 3. Canonical Call-Site, Telemetry & Confidence Routing
 
 Always use standard Apple Foundation Models APIs (`LanguageModelSession`)—do not introduce proprietary session wrappers:
 
@@ -97,63 +100,139 @@ let decision: TriageDecision = response.content
 print("Department:", decision.department)       // .billing
 print("Is Urgent:", decision.isUrgent)           // true
 print("Frustration:", decision.frustrationLevel) // 3
+```
 
-// 4. Access calibrated probabilities & confidence (Package Extensions)
-if let urgencyProb = response.probability(for: "isUrgent") {
-    print("Urgency probability:", urgencyProb) // e.g. 0.96
-    if urgencyProb > 0.90 {
-        // High-confidence automatic triage
-    }
+### Confidence Routing with `RoutingPolicy`
+
+Never write naive `if prob > 0.5` checks. In Jev:
+- **`0.50` indicates maximum epistemic uncertainty**, not "half true".
+- The **undecided band** ($0.35 \dots 0.65$) indicates the model is genuinely undecided (`answer == nil`).
+- A probability of `0.05` is a **confident "no"** ($\text{decisiveness} = \max(p, 1 - p) = 0.95$), which routes to `.auto` with `answer: false`.
+
+Use `RoutingPolicy` to map calibrated signals into three operational actions (`.auto`, `.confirm`, `.escalate`):
+
+```swift
+let policy = RoutingPolicy(
+    escalateBelow: 0.60,
+    autoAtOrAbove: 0.85,
+    undecidedBand: 0.35...0.65
+)
+
+// Categorical or Scored Decision (.auto, .confirm, .escalate)
+let deptAction = response.decision(for: "department", policy: policy)
+switch deptAction {
+case .auto:
+    routeToDepartment(decision.department)
+case .confirm:
+    suggestDepartment(decision.department)
+case .escalate:
+    routeToGeneralQueue()
 }
 
-if let deptConfidence = response.confidence(for: "department") {
-    print("Department selection confidence:", deptConfidence) // 0.0 - 1.0
+// Boolean (Noul) Judgement
+let urgencyJudgement = response.judgement(for: "isUrgent", policy: policy)
+switch urgencyJudgement.decision {
+case .auto:
+    if urgencyJudgement.answer == true {
+        pageOnCallLead()       // Confident Yes (p >= 0.85)
+    } else {
+        markStandardPriority() // Confident No (p <= 0.15)
+    }
+case .confirm:
+    promptAgentToConfirm()     // Leaning (0.16...0.34 or 0.65...0.84)
+case .escalate:
+    assignManualReview()       // Undecided band (0.35...0.65): answer is nil
+}
+```
+
+### Rubric Scoring Telemetry with `ScoreValue`
+
+For `@Guide(.range(...))` score properties, Jev returns probability-weighted positions across rubric levels:
+
+```swift
+if let score = response.scoreValue(for: "frustrationLevel") {
+    print("Continuous Weighted Score:", score.value)      // e.g. 2.75 (leaning toward level 3)
+    print("Discrete Rounded Level:", score.rounded)       // 3
+    print("Confidence Score:", score.confidence)          // 0.0 ... 1.0
+    if let normalized = score.normalized {
+        print("Normalized Rubric Position:", normalized)  // 0.0 ... 1.0
+    }
 }
 ```
 
 ---
 
-## 4. Production Mobile Architecture (`JevTransport`)
+## 4. HTTP Resilience & Swift 6 Cooperative Cancellation
+
+Configure automated retry backoff via `RetryPolicy` on `JevLanguageModel`:
+
+```swift
+let retryPolicy = RetryPolicy(
+    maxAttempts: 3,                  // Initial attempt + up to 2 retries
+    initialDelay: .milliseconds(500), // First retry delay
+    multiplier: 2.0,                 // Exponential backoff
+    jitter: 0.2,                     // +/- 20% random jitter to avoid thundering herds
+    retryableStatuses: [429, 529],   // Retry rate-limits and temporary capacity limits
+    maxRetryAfter: .seconds(60)      // Respects RFC 9110 Retry-After headers
+)
+
+let model = JevLanguageModel(apiKey: apiKey, retryPolicy: retryPolicy)
+```
+
+### Cooperative Cancellation
+In Swift 6 concurrency, task cancellation must never be swallowed or converted into a generic error:
+- **`CancellationError` is NEVER wrapped in `JevError`**: If a parent `Task` is cancelled (e.g., user navigates away in SwiftUI), `CancellationError` propagates directly.
+- Retry sleeps abort immediately upon cancellation.
+
+```swift
+let task = Task {
+    try await session.respond(to: ticket, generating: TriageDecision.self)
+}
+
+// When user dismisses view or cancels operation:
+task.cancel()
+
+do {
+    let response = try await task.value
+} catch is CancellationError {
+    print("Decision task cancelled cleanly.")
+} catch let error as JevError {
+    print("Jev failure: \(error)")
+}
+```
+
+---
+
+## 5. Production Mobile Architecture (`JevTransport`)
 
 **Never embed `TYPESAFE_API_KEY` inside client application binaries.** 
 
-In production iOS, macOS, or visionOS apps, route requests through a backend proxy (such as a Firebase Cloud Function, Vapor backend, or Cloudflare Worker) protected by **Apple App Attest / Firebase App Check**:
+In production iOS, macOS, or visionOS apps, route requests through a backend reverse proxy (such as a Firebase Cloud Function, Vapor backend, or Cloudflare Worker) protected by **Apple App Attest / Firebase App Check**.
+
+The repository includes a ready-to-use reference transport in `Integrations/FirebaseAppCheckProxy/FirebaseAppCheckTransport.swift`:
 
 ```swift
 import JevFoundationModels
 
-public struct AppCheckTransport: JevTransport, Sendable {
-    public init() {}
+// 1. Configure the proxy transport (supports .cached or .singleUse replay-protected tokens)
+let transport = FirebaseAppCheckTransport(
+    proxyEndpoint: URL(string: "https://your-cloud-function.cloudfunctions.net/triageProxy")!,
+    tokenStrategy: .cached // < 1ms cached hardware token lookup
+)
 
-    public func send(request: JevRequest, apiKey: String?, endpoint: URL) async throws -> JevResponse {
-        // 1. Fetch hardware-backed App Check token
-        let token = try await AppCheck.appCheck().token(forcingRefresh: false)
-        
-        // 2. Route to your backend proxy endpoint
-        var urlRequest = URLRequest(url: endpoint)
-        urlRequest.httpMethod = "POST"
-        urlRequest.setValue(token.token, forHTTPHeaderField: "X-Firebase-AppCheck")
-        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        urlRequest.httpBody = try JSONEncoder().encode(request)
-
-        let (data, response) = try await URLSession.shared.data(for: urlRequest)
-        // Check HTTP status and decode JevResponse...
-        return try JSONDecoder().decode(JevResponse.self, from: data)
-    }
-}
-
-// Configuration with custom transport (no API key needed — the key lives on your backend proxy):
+// 2. Initialize model without apiKey (authentication handled by App Check + backend proxy secret)
 let model = JevLanguageModel(
     endpoint: URL(string: "https://your-cloud-function.cloudfunctions.net/triageProxy")!,
-    transport: AppCheckTransport()
+    transport: transport
 )
+let session = LanguageModelSession(model: model)
 ```
 
 ---
 
-## 5. Offline Testing with Swift Testing (`@Test`)
+## 6. Deterministic Offline Testing with Swift Testing (`@Test`)
 
-Always test decision workflows deterministically without requiring a live internet connection or API keys using `MockJevTransport`:
+Always test decision workflows deterministically without live network access or API credentials using `MockJevTransport`:
 
 ```swift
 import Testing
@@ -174,7 +253,7 @@ struct TriageWorkflowTests {
                 answers: [
                     "isUrgent": JevAnswer(type: "noul", noul: 0.97, confidence: 0.95),
                     "department": JevAnswer(type: "choice", choice: "billing", confidence: 0.98),
-                    "frustrationLevel": JevAnswer(type: "score", score: 3.0)
+                    "frustrationLevel": JevAnswer(type: "score", score: 2.8, confidence: 0.90)
                 ],
                 usage: JevUsage(inputTokens: 85, outputTokens: 10)
             )
@@ -188,21 +267,33 @@ struct TriageWorkflowTests {
             generating: TriageDecision.self
         )
 
+        // Verify strongly typed content
         #expect(response.content.isUrgent == true)
         #expect(response.content.department == .billing)
-        #expect(response.content.frustrationLevel == 3)
-        #expect(response.probability(for: "isUrgent") == 0.97)
+        #expect(response.content.frustrationLevel == 3) // rounded from 2.8
+
+        // Verify routing policy decision
+        let judgement = response.judgement(for: "isUrgent")
+        #expect(judgement.decision == .auto)
+        #expect(judgement.answer == true)
+
+        // Verify rubric telemetry
+        let frustration = response.scoreValue(for: "frustrationLevel")
+        #expect(frustration?.rounded == 3)
+        #expect(frustration?.value == 2.8)
     }
 }
 ```
 
 ---
 
-## 6. Implementation Nuances & Troubleshooting
+## 7. Implementation Nuances & Troubleshooting
 
 | Issue / Error | Cause | Resolution |
 | :--- | :--- | :--- |
 | `JevError.invalidSchema` | `@Generable` type contains an unconstrained `String` or unsupported collection. | Convert `String` to `enum: String`, `Bool`, or numeric `@Guide(.range(...))`. |
 | `JevError.structuredOutputRequired` | `session.respond(to:)` was called without a `generating:` schema. | Always pass a `@Generable` type to `generating:`. |
+| `response.probability(...)` or `confidence(...)` returns `nil` | Question key does not match schema convention. | **Key Resolution Matrix**:<br>• Struct field: `"propertyName"` (e.g. `"isUrgent"`)<br>• Nested struct: `"parent.child"` (e.g. `"metadata.priority"`)<br>• Root `@Generable enum`: `"choice"`<br>• Root `Bool` or score: `"root"` |
 | Root Enum Decoding (`Fatal error: Unexpected rawValue`) | Apple Foundation Models expects bare strings for root `@Generable enum`s (e.g. `billing`), not JSON quotes (`"\"billing\""`). | Handled automatically by `ResponseSynthesizer` (Tech Note 0002). |
-| Probabilities Dictionary Empty | Question key does not match property name. | Use property names as keys: `response.probability(for: "propertyName")`. |
+| `NoulJudgement.answer` is `nil` | Probability fell within the undecided band ($0.35 \dots 0.65$). | Expected behavior. Handle `decision == .escalate` and route to human review or fallback logic. |
+| Task cancellation handling | Catching `JevError` does not catch cancelled requests. | Catch `CancellationError` separately from `JevError`—cooperative cancellation is never wrapped in `JevError`. |
