@@ -204,9 +204,9 @@ struct MyApp: App {
 
 ### Step 4: Create the `FirebaseAppCheckTransport`
 
-> **Architectural Note:** `JevFoundationModels` maintains a strict mandate of **Zero External Third-Party Runtime Dependencies**. Because Swift Package Manager isolates package targets during compilation, vendor SDKs like Firebase cannot be conditionally imported via `#if canImport` from a consuming app without forcing all library users to resolve the entire `firebase-ios-sdk` dependency graph. Therefore, `FirebaseAppCheckTransport.swift` is distributed as a reference drop-in file that compiles natively inside your application target where Firebase is already linked. For technical details, see [Tech Note 0004 — SPM Dependency Isolation & Decoupling Vendor Transports](../tech-notes/0004-spm-dependency-isolation-and-vendor-transports.md).
+> **Architectural Note:** `JevFoundationModels` maintains a strict mandate of **Zero External Third-Party Runtime Dependencies**. Because Swift Package Manager isolates package targets during compilation, vendor SDKs like Firebase cannot be conditionally imported via `#if canImport` from a consuming app without forcing all library users to resolve the entire `firebase-ios-sdk` dependency graph. Therefore, `FirebaseAppCheckTransport.swift` is distributed as a reference drop-in file that compiles natively inside your application target where Firebase is already linked. For technical details, see [Tech Note 0005 — SPM Dependency Isolation & Decoupling Vendor Transports](../tech-notes/0005-spm-dependency-isolation-and-vendor-transports.md).
 
-Copy `FirebaseAppCheckTransport.swift` from `Examples/FirebaseAppCheckProxy/` into your app:
+Copy `FirebaseAppCheckTransport.swift` from `Integrations/FirebaseAppCheckProxy/` into your app:
 
 ```swift
 import Foundation
@@ -242,7 +242,7 @@ public struct FirebaseAppCheckTransport: JevTransport, Sendable {
 
     public func send(
         request: JevRequest,
-        apiKey: String,
+        apiKey: String?,
         endpoint: URL
     ) async throws -> JevResponse {
         // 1. Obtain App Check token based on chosen strategy
@@ -304,8 +304,8 @@ let proxyURL = URL(string: "https://us-central1-myproject.cloudfunctions.net/sys
 let transport = FirebaseAppCheckTransport(proxyEndpoint: proxyURL, tokenStrategy: .cached)
 
 // 2. Configure JevLanguageModel with the custom transport
-// Note: apiKey is a placeholder since authentication is handled via App Check
-let jev = JevLanguageModel(apiKey: "app-check-authenticated", transport: transport)
+// No API key is needed — key management lives on the server side of the proxy
+let jev = JevLanguageModel(transport: transport)
 
 // 3. Initialize standard Apple LanguageModelSession
 let session = LanguageModelSession(model: jev)

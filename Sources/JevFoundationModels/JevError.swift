@@ -1,16 +1,26 @@
 import Foundation
 
+// See tech-notes/0006-http-resilience-and-confidence-routing.md
+
 /// Errors that can occur when executing requests with the Jev decision model.
-public enum JevError: LocalizedError, Sendable {
+/// - Important: `CancellationError` is never wrapped in `JevError` and always propagates cleanly across concurrency boundaries.
+public enum JevError: LocalizedError, Sendable, Equatable, Hashable {
     /// Jev requires a structured @Generable schema; arbitrary text generation is not supported.
     case structuredOutputRequired
+
     /// The provided schema could not be converted into valid Jev decision questions.
     case invalidSchema(String)
-    /// An error returned by the TypeSafe API.
+
+    /// No API key was configured while using the default `URLSessionTransport`.
+    case missingAPIKey
+
+    /// An unhandled HTTP status code returned by the server.
     case apiError(statusCode: Int, message: String)
-    /// Network or communication error.
+
+    /// Network or communication error. Note that `CancellationError` is never wrapped.
     case networkError(String)
-    /// Response parsing or decoding error.
+
+    /// Response parsing or JSON decoding failure.
     case decodingError(String)
 
     public var errorDescription: String? {
@@ -19,8 +29,10 @@ public enum JevError: LocalizedError, Sendable {
             return "Jev is a System One decision model and requires a @Generable schema. Free-form text generation is not supported."
         case .invalidSchema(let details):
             return "Failed to convert @Generable schema to Jev questions: \(details)"
+        case .missingAPIKey:
+            return "A TYPESAFE_API_KEY is required when using the default URLSessionTransport. Use a reverse-proxy transport (e.g. FirebaseAppCheckTransport) to authenticate without embedding a key."
         case .apiError(let statusCode, let message):
-            return "TypeSafe API returned error \(statusCode): \(message)"
+            return "TypeSafe API returned HTTP \(statusCode): \(message)"
         case .networkError(let details):
             return "Network error: \(details)"
         case .decodingError(let details):

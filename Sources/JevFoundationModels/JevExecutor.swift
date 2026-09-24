@@ -65,11 +65,18 @@ public final class JevExecutor: LanguageModelExecutor, Sendable {
             "model": GeneratedContent(jevResponse.model)
         ]
 
+        if let serverDurationMs = jevResponse.serverDurationMs {
+            metadata["serverDurationMs"] = GeneratedContent(String(format: "%.1f", serverDurationMs))
+        }
+
         if let probabilitiesJSON = synthesizer.extractProbabilitiesJSON(from: jevResponse.answers) {
             metadata["probabilities"] = (try? GeneratedContent(json: probabilitiesJSON)) ?? GeneratedContent(probabilitiesJSON)
         }
         if let confidenceJSON = synthesizer.extractConfidenceJSON(from: jevResponse.answers) {
             metadata["confidence"] = (try? GeneratedContent(json: confidenceJSON)) ?? GeneratedContent(confidenceJSON)
+        }
+        if let scoresJSON = synthesizer.extractScoresJSON(from: jevResponse.answers, layout: translation.layout) {
+            metadata["scores"] = (try? GeneratedContent(json: scoresJSON)) ?? GeneratedContent(scoresJSON)
         }
 
         await channel.send(.response(entryID: entryID, action: .updateMetadata(metadata)))

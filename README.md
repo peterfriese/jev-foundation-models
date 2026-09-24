@@ -81,8 +81,9 @@ enum Department {
 import FoundationModels
 import JevFoundationModels
 
-// 1. Create the model
-let jev = JevLanguageModel(apiKey: ProcessInfo.processInfo.environment["TYPESAFE_API_KEY"]!)
+// 1. Create the model with optional resilience policy
+let retryPolicy = RetryPolicy(maxAttempts: 3, initialDelay: .milliseconds(250), jitter: 0.15)
+let jev = JevLanguageModel(apiKey: ProcessInfo.processInfo.environment["TYPESAFE_API_KEY"]!, retryPolicy: retryPolicy)
 
 // 2. Initialize native Apple FoundationModels session
 let session = LanguageModelSession(model: jev)
@@ -97,9 +98,17 @@ print("Urgent: \(triage.isUrgent)")             // true
 print("Route: \(triage.department)")           // .billing
 print("Frustration: \(triage.frustration)")    // 2
 
-// 5. Access calibrated probabilities & confidence from metadata
-if let probabilities = response.metadata["probabilities"] {
-    print("Probabilities: \(probabilities)")
+// 5. Route decisions with calibrated confidence
+let policy = RoutingPolicy(escalateBelow: 0.60, autoAtOrAbove: 0.85)
+switch response.decision(for: "department", policy: policy) {
+case .auto:     print("Auto-routed to \(triage.department)")
+case .confirm:  print("Suggesting \(triage.department) for confirmation")
+case .escalate: print("Escalated to human supervisor")
+}
+
+let judgement = response.judgement(for: "isUrgent", policy: policy)
+if judgement.decision == .auto && judgement.answer == true {
+    print("Urgency: Decisive True -> Page on-call engineering P0")
 }
 ```
 
@@ -132,9 +141,57 @@ if let probabilities = response.metadata["probabilities"] {
 ```
 
 For more in-depth documentation, see:
+* [Confidence & Noul Routing Guide](docs/confidence-routing.md)
+* [HTTP Resilience & Retries Guide](docs/resilience-and-retries.md)
 * [Architecture Guide](docs/architecture.md)
+* [Mobile Security Guide](docs/mobile-security.md)
 * [Type Mapping Guide](docs/mapping-guide.md)
 * [Tech Notes](tech-notes/README.md)
+
+---
+
+## 🛡️ Production Mobile Security: Apple App Attest & Firebase App Check
+
+Because `TYPESAFE_API_KEY` cannot be embedded inside client-side iOS or visionOS apps, this repository provides a complete, production-ready reference architecture in [`Integrations/FirebaseAppCheckProxy`](Integrations/FirebaseAppCheckProxy):
+
+```
+┌─────────────────────────────────┐
+│     Client App (iOS 27+)        │
+│  • Apple App Attest / Enclave   │
+│  • FirebaseAppCheckTransport    │
+└────────────────┬────────────────┘
+                 │ POST /systemone (Header: X-Firebase-AppCheck)
+                 ▼
+┌─────────────────────────────────┐
+│  Cloud Function (2nd Gen Proxy) │
+│  • Token Verification           │
+│  • Replay Protection (Optional) │
+│  • Injects TYPESAFE_API_KEY     │
+└────────────────┬────────────────┘
+                 │ POST https://api.typesafe.ai/v1/systemone
+                 ▼
+┌─────────────────────────────────┐
+│        TypeSafe AI (Jev)        │
+└─────────────────────────────────┘
+```
+
+- **Hardware-Attested Client Transport**: A drop-in Swift transport (`FirebaseAppCheckTransport.swift`) bridging the `FirebaseAppCheck` SDK to `JevTransport` with support for both:
+  - `.cached` (default): In-memory token lookup with `< 1 ms` overhead, designed for interactive UI and continuous decision loops.
+  - `.singleUse`: One-time consumable tokens with server-side replay protection for sensitive actions.
+- **Serverless Reverse Proxy**: A ready-to-deploy Firebase Cloud Function (2nd Gen) that validates App Check tokens, guards against replayed requests, injects the API key from Google Secret Manager, and forwards evaluations with a 15-second timeout.
+- **Keeps Core Library Pure**: Distributed as an unbundled recipe so `JevFoundationModels` retains its zero-dependency guarantee, avoiding pulling hundreds of megabytes of Firebase dependencies into projects that don't need them.
+
+For complete setup and deployment instructions, see the **[Mobile Security Guide](docs/mobile-security.md)** and **[Integrations/FirebaseAppCheckProxy](Integrations/FirebaseAppCheckProxy/README.md)**.
+
+---
+
+## 🤖 Agent Skill
+
+If you are using AI coding agents (Claude Code, OpenCode, Cursor, Windsurf, etc.), install the companion agent skill to equip your agent with the `@Generable` schema mapping rules, probability telemetry extensions, custom transport patterns, and offline test harnesses:
+
+```bash
+npx skills add peterfriese/jev-foundation-models
+```
 
 ---
 
@@ -150,20 +207,23 @@ swift test
 
 ## 📱 Sample Applications
 
-### 1. Duplicate Article Detection (`duplicate-article-demo`)
+### 1. Duplicate Article Detection ([`duplicate-article-demo`](Examples/DuplicateArticleDemo/README.md))
 
 Demonstrates a two-layer deduplication system for read-it-later and knowledge-management apps:
 - **Layer 1 (Deterministic)**: Catches identical URLs and matching title/byline pairs instantly at 0ms and zero token cost.
-- **Layer 2 (Jev System One via Foundation Models)**: Catches rewritten wire stories and syndicated news (different URL, different headline, different byline) using calibrated probabilities and an escape hatch ("Save anyway").
+- **Layer 2 (Jev System One via Foundation Models)**: Evaluates rewritten wire stories and syndicated news (different URL, headline, byline) with calibrated probabilities.
+- **Confidence & Noul Routing**: Symmetrical decisiveness gating with the undecided band ($0.35\dots0.65$) and cooperative cancellation.
 
 ```bash
-# Run the 3-scenario deduplication walkthrough
+# Run the 4-scenario deduplication & cancellation walkthrough
 swift run duplicate-article-demo
 ```
 
-### 2. Ticket Triage (`ticket-triage-demo`)
+### 2. Ticket Triage ([`ticket-triage-demo`](Examples/TicketTriageDemo/README.md))
 
 Demonstrates multi-field `@Generable` evaluation with `Bool`, `enum`, and `@Guide(.range(...))` score:
+- **Resilient HTTP Transport**: `RetryPolicy` with exponential backoff, jitter, and RFC 9110 `Retry-After` adherence.
+- **Operational Confidence Routing**: Routes categorical choices (`.auto`, `.confirm`, `.escalate`), gates boolean urgency, and inspects rubric scores.
 
 ```bash
 # Run with default sample ticket
@@ -171,6 +231,22 @@ swift run ticket-triage-demo
 
 # Or evaluate custom text
 swift run ticket-triage-demo "Our server deployment failed with error 500."
+```
+
+### 3. Smart Directory Organizer with Dynamic Profiles ([`file-organizer-demo`](Examples/FileOrganizerDemo/README.md))
+
+Demonstrates Apple Foundation Models **Dynamic Profiles** (`LanguageModelSession.DynamicProfile`), runtime state adaptation with `@SessionPropertyEntry`, turn isolation via `.historyTransform`, and multi-primitive Jev System One triage:
+- **Dynamic Profile Adaptation**: Switches between Semantic Domain and Actionable Workflow triaging by modifying session properties in-place without rebuilding the session.
+- **Sensitive Content Quarantine**: Flags credentials, API keys, and secrets via `noul` and quarantines them into `Quarantine_Vault/`.
+- **Review Queue for Low-Confidence Items**: Calibrated `score` routes uncertain content to `Review_Queue/` for human verification.
+- **Turn Isolation**: Uses `.historyTransform` to prune prior file turns from the transcript, keeping batch evaluations stateless and token-efficient.
+
+```bash
+# Run the interactive sandbox walkthrough
+swift run file-organizer-demo --demo
+
+# Organize any directory with dry-run preview (or add --apply to execute moves)
+swift run file-organizer-demo --path ~/Downloads --strategy domain
 ```
 
 ---

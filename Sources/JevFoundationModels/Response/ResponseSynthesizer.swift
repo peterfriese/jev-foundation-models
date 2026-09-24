@@ -96,6 +96,31 @@ public struct ResponseSynthesizer: Sendable {
         return json
     }
 
+    /// Extracts typed ScoreValue models from Jev answers into a JSON string.
+    public func extractScoresJSON(from answers: [String: JevAnswer], layout: SchemaRootLayout? = nil) -> String? {
+        var scores: [String: ScoreValue] = [:]
+        let scoreMetadata = layout.map(scoreQuestionMetadata) ?? [:]
+        for (key, answer) in answers {
+            if let metadata = scoreMetadata[key] {
+                if let scoreVal = answer.scoreValue(
+                    minimum: metadata.minimum,
+                    maximum: metadata.maximum,
+                    isInteger: metadata.isInteger
+                ) {
+                    scores[key] = scoreVal
+                }
+            } else if let scoreVal = answer.scoreValue {
+                scores[key] = scoreVal
+            }
+        }
+        guard !scores.isEmpty,
+              let data = try? JSONEncoder().encode(scores),
+              let json = String(data: data, encoding: .utf8) else {
+            return nil
+        }
+        return json
+    }
+
     // MARK: - Internal Helpers
 
     private func buildObjectDictionary(
@@ -161,22 +186,10 @@ public struct ResponseSynthesizer: Sendable {
         max: Double,
         isInteger: Bool
     ) -> Double {
-        guard let rawScore = answer?.score else {
+        guard let scoreValue = answer?.scoreValue(minimum: min, maximum: max, isInteger: isInteger) else {
             return min
         }
-
-        let computed: Double
-        if rawScore >= min && rawScore <= max {
-            computed = rawScore
-        } else if rawScore >= 0 && rawScore <= (max - min) {
-            // Raw score is a 0-based rubric level index
-            computed = min + rawScore
-        } else {
-            computed = Swift.min(Swift.max(rawScore, min), max)
-        }
-
-        let clamped = Swift.min(Swift.max(computed, min), max)
-        return isInteger ? round(clamped) : clamped
+        return isInteger ? round(scoreValue.value) : scoreValue.value
     }
 
     private func defaultFallbackValue(for descriptor: SchemaPropertyDescriptor) -> Any {
@@ -193,6 +206,38 @@ public struct ResponseSynthesizer: Sendable {
                 dict[k] = defaultFallbackValue(for: v)
             }
             return dict
+        }
+    }
+
+    private func scoreQuestionMetadata(for layout: SchemaRootLayout) -> [String: (minimum: Double, maximum: Double, isInteger: Bool)] {
+        switch layout {
+        case .object(let properties, _):
+            var metadata: [String: (minimum: Double, maximum: Double, isInteger: Bool)] = [:]
+            for descriptor in properties.values {
+                metadata.merge(scoreQuestionMetadata(for: descriptor), uniquingKeysWith: { current, _ in current })
+            }
+            return metadata
+        case .score(let minimum, let maximum, let isInteger, let questionKey):
+            return [questionKey: (minimum, maximum, isInteger)]
+        case .choice, .boolean:
+            return [:]
+        }
+    }
+
+    private func scoreQuestionMetadata(
+        for descriptor: SchemaPropertyDescriptor
+    ) -> [String: (minimum: Double, maximum: Double, isInteger: Bool)] {
+        switch descriptor.kind {
+        case .score(let minimum, let maximum, let isInteger):
+            return [descriptor.questionKey: (minimum, maximum, isInteger)]
+        case .nested(let children):
+            var metadata: [String: (minimum: Double, maximum: Double, isInteger: Bool)] = [:]
+            for child in children.values {
+                metadata.merge(scoreQuestionMetadata(for: child), uniquingKeysWith: { current, _ in current })
+            }
+            return metadata
+        case .boolean, .choice:
+            return [:]
         }
     }
 }

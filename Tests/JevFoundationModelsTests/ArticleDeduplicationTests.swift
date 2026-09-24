@@ -81,6 +81,7 @@ struct ArticleDeduplicationTests {
         // Verify probability helper for boolean question
         let trueProb = response.probability(for: "isDuplicate")
         #expect(trueProb == 0.94)
+        #expect(response.typedProbability(for: "isDuplicate") == 0.94)
 
         // Verify confidence helper
         let conf = response.confidence(for: "isDuplicate")

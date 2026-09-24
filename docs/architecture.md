@@ -68,4 +68,13 @@
 ### 4. `ResponseSynthesizer`
 - Jev returns answers under a dictionary keyed by property name (`answers.department.choice`).
 - `ResponseSynthesizer` transforms this dictionary into a valid JSON object matching the `@Generable` schema so Apple's internal decoder can instantiate the Swift struct directly.
-- Concurrently extracts probability distributions and confidence scores into the response metadata.
+- Concurrently extracts probability distributions, confidence scores, and `ScoreValue` models into the response metadata.
+
+### 5. `URLSessionTransport` & `RetryPolicy`
+- Native HTTP transport providing automated retries for transient status codes (HTTP 429, 529).
+- Calculates exponential backoff with random jitter and parses RFC 9110 `Retry-After` headers (both integer seconds and HTTP dates).
+- Guarantees cooperative task cancellation: `CancellationError` is never caught or wrapped, allowing interactive UI tasks to terminate immediately.
+
+### 6. `RoutingPolicy` & Telemetry Extensions
+- Maps continuous confidence scores and probabilities on `LanguageModelSession.Response` into discrete operational actions (`.auto`, `.confirm`, `.escalate`).
+- Implements symmetrical noul gating with an explicit undecided band ($0.35\dots0.65$), safely escalating epistemic uncertainty without arbitrary coin-flips.

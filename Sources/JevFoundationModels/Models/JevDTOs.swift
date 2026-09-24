@@ -65,11 +65,13 @@ public struct JevResponse: Codable, Sendable, Equatable {
     public let model: String
     public let answers: [String: JevAnswer]
     public let usage: JevUsage?
+    public var serverDurationMs: Double?
 
-    public init(model: String, answers: [String: JevAnswer], usage: JevUsage? = nil) {
+    public init(model: String, answers: [String: JevAnswer], usage: JevUsage? = nil, serverDurationMs: Double? = nil) {
         self.model = model
         self.answers = answers
         self.usage = usage
+        self.serverDurationMs = serverDurationMs
     }
 }
 
@@ -95,6 +97,7 @@ public struct JevAnswer: Codable, Sendable, Equatable {
     public let score: Double?
     public let confidence: Double?
     public let probabilities: [String: Double]?
+    public let legend: [String: String]?
 
     public init(
         type: String,
@@ -102,7 +105,8 @@ public struct JevAnswer: Codable, Sendable, Equatable {
         choice: String? = nil,
         score: Double? = nil,
         confidence: Double? = nil,
-        probabilities: [String: Double]? = nil
+        probabilities: [String: Double]? = nil,
+        legend: [String: String]? = nil
     ) {
         self.type = type
         self.noul = noul
@@ -110,5 +114,120 @@ public struct JevAnswer: Codable, Sendable, Equatable {
         self.score = score
         self.confidence = confidence
         self.probabilities = probabilities
+        self.legend = legend
+    }
+
+    /// Converts this answer into a typed `Probability` if it is a boolean (`noul`) answer.
+    public var probability: Probability? {
+        noul.flatMap(Probability.init(exactly:))
+    }
+
+    /// Converts this answer into a typed `ScoreValue` if it is a rubric `score` answer.
+    public var scoreValue: ScoreValue? {
+        scoreValue(minimum: nil, maximum: nil, isInteger: false)
+    }
+
+    func scoreValue(minimum: Double?, maximum: Double?, isInteger: Bool) -> ScoreValue? {
+        guard let score, score.isFinite else { return nil }
+        let conf = confidence ?? 1.0
+        guard conf.isFinite, (0.0...1.0).contains(conf) else { return nil }
+        var indexedLegend: [Int: String] = [:]
+        if let legend {
+            for (k, v) in legend {
+                if let idx = Int(k) { indexedLegend[idx] = v }
+            }
+        }
+        var indexedProbs: [Int: Double] = [:]
+        if let probabilities {
+            for (k, v) in probabilities {
+                if let idx = Int(k), v.isFinite { indexedProbs[idx] = v }
+            }
+        }
+
+        let levelCount = max(indexedLegend.count, indexedProbs.count)
+        let adjustedScore = adjustedScoreValue(
+            rawScore: score,
+            minimum: minimum,
+            maximum: maximum,
+            isInteger: isInteger,
+            levelCount: levelCount
+        )
+        return ScoreValue(
+            validatingValue: adjustedScore,
+            legend: shiftedLevels(
+                indexedLegend,
+                minimum: minimum,
+                maximum: maximum,
+                isInteger: isInteger,
+                levelCount: levelCount
+            ),
+            probabilities: shiftedLevels(
+                indexedProbs,
+                minimum: minimum,
+                maximum: maximum,
+                isInteger: isInteger,
+                levelCount: levelCount
+            ),
+            confidence: conf
+        )
+    }
+
+    private func adjustedScoreValue(
+        rawScore: Double,
+        minimum: Double?,
+        maximum: Double?,
+        isInteger: Bool,
+        levelCount: Int
+    ) -> Double {
+        guard let minimum, let maximum else { return rawScore }
+        guard minimum <= maximum else { return rawScore }
+
+        let span = maximum - minimum
+        if isInteger,
+           minimum.rounded() == minimum,
+           maximum.rounded() == maximum,
+           levelCount > 1,
+           span == Double(levelCount - 1),
+           rawScore >= 0, rawScore <= Double(levelCount - 1) {
+            return minimum + rawScore
+        }
+
+        if rawScore >= minimum && rawScore <= maximum {
+            return rawScore
+        }
+
+        if levelCount > 1, rawScore >= 0, rawScore <= Double(levelCount - 1) {
+            return minimum + (rawScore / Double(levelCount - 1)) * span
+        }
+
+        if rawScore >= 0, rawScore <= span {
+            return minimum + rawScore
+        }
+
+        return Swift.min(Swift.max(rawScore, minimum), maximum)
+    }
+
+    private func shiftedLevels<T>(
+        _ source: [Int: T],
+        minimum: Double?,
+        maximum: Double?,
+        isInteger: Bool,
+        levelCount: Int
+    ) -> [Int: T] {
+        guard isInteger,
+              let minimum,
+              let maximum,
+              minimum.rounded() == minimum,
+              maximum.rounded() == maximum,
+              levelCount > 1,
+              (maximum - minimum) == Double(levelCount - 1),
+              source.keys.allSatisfy({ (0...(levelCount - 1)).contains($0) }) else {
+            return source
+        }
+
+        let offset = Int(minimum)
+        return Dictionary(uniqueKeysWithValues: source.map { (key, value) in
+            (key + offset, value)
+        })
     }
 }

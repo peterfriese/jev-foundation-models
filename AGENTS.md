@@ -42,4 +42,13 @@ The bridge translates Foundation Models generation schemas to TypeSafe System On
 - Use modern **Swift Testing** (`@Test`, `#expect`) instead of legacy XCTest.
 
 ### 6. Tech Note Curation
-- If an Apple Foundation Models SDK quirk, undocumented behavior, or serialization nuance is discovered, immediately document it in `tech-notes/` following the `NNNN-kebab-slug.md` convention and update `tech-notes/README.md`.
+- Any time an Apple Foundation Models SDK quirk, undocumented behavior, compilation discrepancy, platform restriction, or serialization nuance is discovered or required debugging, immediately document it in `tech-notes/`.
+- **File Naming & Structure**:
+  - File path: `tech-notes/NNNN-kebab-slug.md` (sequential `max + 1`, e.g. `0005-my-finding.md`).
+  - Standard Template:
+    - `# NNNN — Short Title`
+    - Metadata: Date (`YYYY-MM-DD`), Author, Framework (`FoundationModels`), Upstream.
+    - Sections: `## Context`, `## Findings`, `## Implications`, `## Evidence / Sources`.
+- **Index & Cross-Referencing**:
+  - Always update the index table in `tech-notes/README.md`.
+  - Embed inline code comments in relevant Swift files: `// See tech-notes/NNNN-short-title.md`.

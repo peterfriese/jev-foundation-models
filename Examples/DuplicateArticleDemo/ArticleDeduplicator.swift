@@ -30,9 +30,17 @@ public struct ArticleDeduplicator: Sendable {
     /// The calibrated decision threshold for Jev's noul probability. Defaults to 0.60.
     public let threshold: Double
 
-    public init(model: JevLanguageModel, threshold: Double = 0.60) {
+    /// The operational routing policy for turning confidence into actions.
+    public let policy: RoutingPolicy
+
+    public init(
+        model: JevLanguageModel,
+        threshold: Double = 0.60,
+        policy: RoutingPolicy = RoutingPolicy(escalateBelow: 0.60, autoAtOrAbove: 0.85)
+    ) {
         self.model = model
         self.threshold = threshold
+        self.policy = policy
     }
 
     // MARK: - Layer 1: Deterministic Matching (Zero-Cost, No Network)
@@ -125,7 +133,7 @@ public struct ArticleDeduplicator: Sendable {
     public func evaluateSemanticPair(
         incoming: Article,
         candidate: Article
-    ) async throws -> (isDuplicate: Bool, probability: Double, tokenUsage: (input: Int, output: Int)) {
+    ) async throws -> (isDuplicate: Bool, probability: Double, judgement: NoulJudgement, tokenUsage: (input: Int, output: Int)) {
         let session = LanguageModelSession(model: model)
         let state = Self.formatEvaluationState(incoming: incoming, candidate: candidate)
 
@@ -136,14 +144,28 @@ public struct ArticleDeduplicator: Sendable {
 
         // Extract calibrated noul probability directly from Jev response metadata
         let probability = response.probability(for: "isDuplicate") ?? (response.content.isDuplicate ? 1.0 : 0.0)
-        let meetsThreshold = probability >= threshold
+        let judgement = response.judgement(for: "isDuplicate", policy: policy)
+
+        // Operational decision:
+        // - .auto with true: decisive duplicate
+        // - .confirm: leaning duplicate, prompt user for confirmation
+        // - .escalate: model is genuinely unsure (inside undecided band); escalate for manual review
+        let isFlagged: Bool
+        switch judgement.decision {
+        case .auto:
+            isFlagged = (judgement.answer == true)
+        case .confirm:
+            isFlagged = (judgement.answer == true || probability >= threshold)
+        case .escalate:
+            isFlagged = true
+        }
 
         let usage = (
             input: response.usage.input.totalTokenCount,
             output: response.usage.output.totalTokenCount
         )
 
-        return (isDuplicate: meetsThreshold, probability: probability, tokenUsage: usage)
+        return (isDuplicate: isFlagged, probability: probability, judgement: judgement, tokenUsage: usage)
     }
 
     // MARK: - Full Deduplication Pipeline
@@ -169,7 +191,11 @@ public struct ArticleDeduplicator: Sendable {
                     if evaluation.isDuplicate {
                         return DuplicateMatch(
                             candidate: candidate,
-                            reason: .semantic(probability: evaluation.probability, threshold: threshold)
+                            reason: .semantic(
+                                probability: evaluation.probability,
+                                threshold: threshold,
+                                judgement: evaluation.judgement
+                            )
                         )
                     }
                     return nil

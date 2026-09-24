@@ -3,6 +3,50 @@ import Foundation
 import FoundationModels
 @testable import JevFoundationModels
 
+// MARK: - Test URLProtocol
+
+/// Intercepts URLSession requests for offline header assertions.
+final class CapturingURLProtocol: URLProtocol {
+    private static let lock = NSLock()
+    nonisolated(unsafe) private static var _capturedAuthHeader: String?
+    nonisolated(unsafe) private static var _responseData: Data = Data()
+
+    static func setResponseData(_ data: Data) {
+        lock.withLock { _responseData = data }
+    }
+
+    static func lastCapturedAuthHeader() -> String? {
+        lock.withLock { _capturedAuthHeader }
+    }
+
+    static func reset() {
+        lock.withLock {
+            _capturedAuthHeader = nil
+            _responseData = Data()
+        }
+    }
+
+    nonisolated override class func canInit(with request: URLRequest) -> Bool { true }
+    nonisolated override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+
+    override func startLoading() {
+        Self.lock.withLock {
+            Self._capturedAuthHeader = request.value(forHTTPHeaderField: "Authorization")
+        }
+        let responseData = Self.lock.withLock { Self._responseData }
+        guard let url = request.url else {
+            client?.urlProtocol(self, didFailWithError: URLError(.badURL))
+            return
+        }
+        let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: responseData)
+        client?.urlProtocolDidFinishLoading(self)
+    }
+
+    override func stopLoading() {}
+}
+
 // MARK: - Test Generable Types
 
 @Generable
@@ -339,6 +383,53 @@ struct JevFoundationModelsTests {
         #expect(response.content == .sales)
     }
 
+    @Test("End-to-end: LanguageModelSession.Response supports confidence routing and ScoreValue inspection")
+    func testEndToEndConfidenceAndNoulRouting() async throws {
+        let mockTransport = MockJevTransport { _ in
+            JevResponse(
+                model: "jev-simulated",
+                answers: [
+                    "isUrgent": JevAnswer(type: "noul", noul: 0.96),
+                    "department": JevAnswer(type: "choice", choice: "engineering", confidence: 0.92),
+                    "frustration": JevAnswer(
+                        type: "score",
+                        score: 1.0,
+                        confidence: 0.88,
+                        probabilities: ["0": 0.05, "1": 0.85, "2": 0.10],
+                        legend: ["0": "calm", "1": "frustrated", "2": "angry"]
+                    )
+                ],
+                usage: JevUsage(inputTokens: 80, outputTokens: 4)
+            )
+        }
+
+        let model = JevLanguageModel(apiKey: "mock-key", transport: mockTransport)
+        let session = LanguageModelSession(model: model)
+
+        let response = try await session.respond(to: "Database deadlocks causing customer checkout failures", generating: TestDecision.self)
+
+        // 1. Categorical confidence routing
+        #expect(response.decision(for: "department") == .auto)
+
+        // 2. Boolean Noul routing with undecided band handling
+        let urgentJudgement = response.judgement(for: "isUrgent")
+        #expect(urgentJudgement.decision == .auto)
+        #expect(urgentJudgement.answer == true)
+        #expect(urgentJudgement.decisiveness == 0.96)
+
+        // 3. ScoreValue inspection
+        let frustrationScore = try #require(response.scoreValue(for: "frustration"))
+        #expect(frustrationScore.rounded == 1)
+        #expect(frustrationScore.normalized == 0.5) // 1.0 / (3 - 1) = 0.5
+        #expect(frustrationScore.legend[1] == "frustrated")
+
+        // 4. Safe escalation for unanswered questions
+        #expect(response.decision(for: "unansweredQuestion") == .escalate)
+        let missingJudgement = response.judgement(for: "unansweredQuestion")
+        #expect(missingJudgement.decision == .escalate)
+        #expect(missingJudgement.answer == nil)
+    }
+
     @Test("JevExecutor rejects unstructured free-form text request without schema")
     func testExecutorRejectsUnstructuredRequest() async throws {
         let model = JevLanguageModel(apiKey: "mock-key")
@@ -377,6 +468,54 @@ struct JevFoundationModelsTests {
         await #expect(throws: JevError.self) {
             try await session.respond(to: "Test inquiry", generating: TestDecision.self)
         }
+    }
+
+    @Test("URLSessionTransport rejects execution without an API key")
+    func testURLSessionTransportRequiresAPIKey() async throws {
+        let model = JevLanguageModel()
+        let request = JevRequest(state: "Test state", questions: [:])
+
+        await #expect(throws: JevError.missingAPIKey) {
+            try await JevClient(configuration: model.executorConfiguration).execute(request: request)
+        }
+    }
+
+    @Test("URLSessionTransport rejects empty-string API keys")
+    func testURLSessionTransportRejectsEmptyAPIKey() async throws {
+        let model = JevLanguageModel(apiKey: "")
+        let request = JevRequest(state: "Test state", questions: [:])
+
+        await #expect(throws: JevError.missingAPIKey) {
+            try await JevClient(configuration: model.executorConfiguration).execute(request: request)
+        }
+    }
+
+    @Test("URLSessionTransport sends configured API key in Authorization header")
+    func testURLSessionTransportSendsAPIKeyHeader() async throws {
+        CapturingURLProtocol.reset()
+        defer { CapturingURLProtocol.reset() }
+
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [CapturingURLProtocol.self]
+        let payload = """
+        {"model":"jev-latest","answers":{"urgent":{"type":"noul","noul":0.9,"confidence":0.8}}}
+        """
+        CapturingURLProtocol.setResponseData(Data(payload.utf8))
+
+        let transport = URLSessionTransport(session: URLSession(configuration: config))
+        let request = JevRequest(
+            state: "Test state",
+            questions: ["urgent": .noul(instructions: "Is this request urgent?")]
+        )
+
+        let response = try await transport.send(
+            request: request,
+            apiKey: "test-api-key",
+            endpoint: URL(string: "https://api.typesafe.ai/v1/systemone")!
+        )
+
+        #expect(response.answers["urgent"]?.noul == 0.9)
+        #expect(CapturingURLProtocol.lastCapturedAuthHeader() == "Bearer test-api-key")
     }
 
     // MARK: - Live API Integration Test

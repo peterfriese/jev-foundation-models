@@ -20,6 +20,10 @@ let package = Package(
         .executable(
             name: "duplicate-article-demo",
             targets: ["DuplicateArticleDemo"]
+        ),
+        .executable(
+            name: "file-organizer-demo",
+            targets: ["FileOrganizerDemo"]
         )
     ],
     targets: [
@@ -32,12 +36,20 @@ let package = Package(
         .executableTarget(
             name: "TicketTriageDemo",
             dependencies: ["JevFoundationModels"],
-            path: "Examples/TicketTriageDemo"
+            path: "Examples/TicketTriageDemo",
+            exclude: ["README.md"]
         ),
         .executableTarget(
             name: "DuplicateArticleDemo",
             dependencies: ["JevFoundationModels"],
-            path: "Examples/DuplicateArticleDemo"
+            path: "Examples/DuplicateArticleDemo",
+            exclude: ["README.md"]
+        ),
+        .executableTarget(
+            name: "FileOrganizerDemo",
+            dependencies: ["JevFoundationModels"],
+            path: "Examples/FileOrganizerDemo",
+            exclude: ["README.md"]
         ),
         .testTarget(
             name: "JevFoundationModelsTests",
