@@ -10,12 +10,12 @@ Workflows can be triggered via prompt intent or slash commands:
 
 1. **⚡ Fast-Path Fix Mode (`/fix`, `/fast`)**:
    - For bug fixes, compiler issues, and targeted tweaks.
-   - Chief of Staff routes directly to platform engineers (`@ios-engineer` / `@android-engineer`) or QA (`@qa-agent`).
+   - Tech Lead routes directly to platform engineers (`@ios-engineer` / `@android-engineer`) or QA (`@qa-agent`).
    - Platform engineers make targeted edits and verify immediately with test suites (`flowdeck test` / `./gradlew testDebugUnitTest`).
 
 2. **🛠️ Pragmatic Feature Mode (`/feature`, `/build`)**:
    - For standard feature development, ViewModel wiring, and UI additions.
-   - Chief of Staff drafts a lightweight 2-3 bullet execution plan.
+   - Tech Lead drafts a lightweight 2-3 bullet execution plan.
    - Directly delegates implementation to `@ios-engineer` and/or `@android-engineer`.
    - `@senior-architect` is invoked only if the feature crosses 3+ architectural modules or changes core data structures.
    - Verified via FlowDeck (`flowdeck build` & `flowdeck test`) or Gradle.
@@ -36,8 +36,8 @@ Workflows can be triggered via prompt intent or slash commands:
 
 ## 🛑 Orchestrator Non-Coding Mandate & Fleet Continuity
 
-1. **Non-Coding Chief of Staff**:
-   - The primary root agent is strictly the **Chief of Staff / Orchestrator** (`@chief-of-staff`).
+1. **Non-Coding Tech Lead**:
+   - The primary root agent is strictly the **Tech Lead / Orchestrator** (`@tech-lead`).
    - **NEVER edit source code files or run raw build commands directly from the root agent context.**
    - All code authoring, bug fixes, refactoring, and test executions **MUST** be dispatched to specialized subagents (`ios-engineer`, `qa-agent`, etc.).
 
@@ -53,7 +53,7 @@ Workflows can be triggered via prompt intent or slash commands:
 
 ## 🤖 Active Subagent Fleet
 
-- **`chief-of-staff`**: Primary workflow orchestrator. Coordinates multi-agent mobile pipelines and strictly delegates coding to subagents.
+- **`tech-lead`**: Primary workflow orchestrator. Coordinates multi-agent mobile pipelines and strictly delegates coding to subagents.
 - **`ios-engineer`**: Implements pure native Apple features using Swift 6 strict concurrency, modern SwiftUI (`@Observable`), FactoryKit DI, and FlowDeck.
 - **`senior-architect`**: Analyzes PRDs for technical feasibility, designs data models, creates ADRs, and generates architecture diagrams via Archify.
 - **`qa-agent`**: Executes builds, boots simulators via RocketSim/simctl, runs tests, and captures verification proof.
