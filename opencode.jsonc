@@ -58,6 +58,13 @@
         "apple-rocketsim"
       ]
     },
+    "android-engineer": {
+      "mode": "subagent",
+      "permission": {
+        "edit": "allow",
+        "bash": "allow"
+      }
+    },
     "journal-agent": {
       "mode": "subagent",
       "permission": {

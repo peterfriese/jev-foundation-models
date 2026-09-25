@@ -55,6 +55,7 @@ Workflows can be triggered via prompt intent or slash commands:
 
 - **`tech-lead`**: Primary workflow orchestrator. Coordinates multi-agent mobile pipelines and strictly delegates coding to subagents.
 - **`ios-engineer`**: Implements pure native Apple features using Swift 6 strict concurrency, modern SwiftUI (`@Observable`), FactoryKit DI, and FlowDeck.
+- **`android-engineer`**: Implements native Android features and fixes with Kotlin/Jetpack tooling and Gradle validation.
 - **`senior-architect`**: Analyzes PRDs for technical feasibility, designs data models, creates ADRs, and generates architecture diagrams via Archify.
 - **`qa-agent`**: Executes builds, boots simulators via RocketSim/simctl, runs tests, and captures verification proof.
 - **`code-reviewer`**: Audits PR diffs against Apple architectural standards, Swift 6 concurrency, and memory safety.
