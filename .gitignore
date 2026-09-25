@@ -1,7 +1,7 @@
 # Xcode & Swift Package Manager
 .build/
 .swiftpm/
-Packages/
+/Packages/
 Package.pins
 Package.resolved
 DerivedData/
@@ -30,6 +30,7 @@ Icon\r
 # Environment variables & secrets
 .env
 .env.*
+!.env.example
 *.key
 *.pem
 *credentials*.json
