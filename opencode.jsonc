@@ -1,6 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "default_agent": "chief-of-staff",
+  "default_agent": "tech-lead",
   "skills": {
     "paths": [
       "skills",
@@ -8,7 +8,15 @@
     ]
   },
   "agent": {
-    "chief-of-staff": {
+    "build": {
+      "disable": true,
+      "disabled": true
+    },
+    "plan": {
+      "disable": true,
+      "disabled": true
+    },
+    "tech-lead": {
       "mode": "primary",
       "permission": {
         "edit": "deny",
@@ -19,7 +27,7 @@
       }
     },
     "code-reviewer": {
-      "mode": "all",
+      "mode": "subagent",
       "permission": {
         "read": "allow"
       },
@@ -29,14 +37,14 @@
       ]
     },
     "docs-writer": {
-      "mode": "all",
+      "mode": "subagent",
       "permission": {
         "edit": "allow",
         "bash": "allow"
       }
     },
     "ios-engineer": {
-      "mode": "all",
+      "mode": "subagent",
       "permission": {
         "edit": "allow",
         "bash": "allow"
@@ -51,26 +59,26 @@
       ]
     },
     "journal-agent": {
-      "mode": "all",
+      "mode": "subagent",
       "permission": {
         "edit": "allow"
       }
     },
     "learnings-agent": {
-      "mode": "all",
+      "mode": "subagent",
       "permission": {
         "edit": "allow"
       }
     },
     "product-manager": {
-      "mode": "all",
+      "mode": "subagent",
       "permission": {
         "edit": "allow",
         "bash": "allow"
       }
     },
     "qa-agent": {
-      "mode": "all",
+      "mode": "subagent",
       "permission": {
         "edit": "allow",
         "bash": "allow"
@@ -81,7 +89,7 @@
       ]
     },
     "senior-architect": {
-      "mode": "all",
+      "mode": "subagent",
       "permission": {
         "edit": "allow",
         "bash": "allow"
