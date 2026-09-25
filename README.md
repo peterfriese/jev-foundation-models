@@ -177,7 +177,8 @@ if judgement.decision == .auto && judgement.answer == true {
 ```
 
 For more in-depth documentation, see:
-* [Architecture Guide](docs/architecture.md)
+* [Architecture Decision Record (ADR)](docs/architecture/ADR-2026-09-25-mail-triage-system-one-engine.md)
+* [Product Requirements Document (PRD)](docs/prd/PRD-2026-09-25-mail-triage-system-one-engine.md)
 * [CLI & Server Deployment Guide](docs/laya-cli-guide.md)
 * [Mobile Deployment & Core ML Guide](docs/laya-mobile-guide.md)
 * [Confidence Routing Guide](docs/confidence-routing.md)

@@ -12,7 +12,8 @@ Welcome to the documentation for **Jev Foundation Models**, the Swift 6 library 
 * [**Confidence & Noul Routing**](confidence-routing.md): Operational decision gating (`.auto`, `.confirm`, `.escalate`), epistemic uncertainty in the undecided band ($0.35\dots0.65$), and rubric scoring.
 * [**HTTP Resilience & Retries**](resilience-and-retries.md): Configurable `RetryPolicy`, exponential backoff with jitter, RFC 9110 `Retry-After`, and cooperative Swift Concurrency cancellation.
 * [**Mobile Security Guide**](mobile-security.md): Deploying securely to iOS/visionOS using Firebase App Check, Apple App Attest, and Cloud Function proxies.
-* [**Architecture & Execution Flow**](architecture.md): Deep-dive into how `LanguageModelSession`, `JevExecutor`, and `LanguageModelExecutorGenerationChannel` interact.
+* [**Architecture Decision Record (ADR)**](architecture/ADR-2026-09-25-mail-triage-system-one-engine.md): Architectural decisions, multi-backend System One execution, and confidence routing.
+* [**Product Requirements Document (PRD)**](prd/PRD-2026-09-25-mail-triage-system-one-engine.md): Product requirements and UX specifications for the MailTriage reference application.
 * [**Type Mapping Guide**](mapping-guide.md): Comprehensive reference mapping `@Generable` Swift types (`Bool`, `enum`, ranges) to Jev primitives (`noul`, `choice`, `score`).
 
 ---

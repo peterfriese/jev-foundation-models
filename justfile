@@ -29,6 +29,3 @@ sim-boot:
     xcrun simctl boot "iPhone 16 Pro" || true
     open -a Simulator
 
-# Notifications
-notify msg="":
-    npx tsx scripts/notify-brrr.ts --title "Jev Foundation Models" --message "{{msg}}"

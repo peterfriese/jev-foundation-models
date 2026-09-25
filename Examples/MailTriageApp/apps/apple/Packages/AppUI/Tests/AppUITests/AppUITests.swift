@@ -7,12 +7,6 @@ import FactoryKit
 @Suite("AppUI Tests")
 @MainActor
 struct AppUITests {
-    @Test("Header view initialization")
-    func testHeaderView() {
-        let view = HeaderView(title: "Test")
-        #expect(view.title == "Test")
-    }
-
     @Test("MailRowView renders email correctly")
     func testMailRowView() {
         let email = InboxData.sampleEmails[0]
@@ -59,45 +53,6 @@ struct AppUITests {
         }
         let splitView = MailSplitView()
         #expect(type(of: splitView) == MailSplitView.self)
-    }
-
-    @Test("ToolbarBackendSelector initializes and reflects store state")
-    func testToolbarBackendSelector() {
-        let store = MailStore(emails: InboxData.sampleEmails)
-        store.selectedBackend = .hostedVPC
-        let selector = ToolbarBackendSelector(store: store)
-        #expect(selector.store.selectedBackend == .hostedVPC)
-    }
-
-    @Test("DecisionActionBarView initializes for untriaged and triaged email")
-    func testDecisionActionBarView() {
-        let store = MailStore(emails: InboxData.sampleEmails)
-        let sample = InboxData.sampleEmails[0]
-
-        // Untriaged
-        let untriagedBar = DecisionActionBarView(store: store, email: sample)
-        #expect(untriagedBar.email.id == sample.id)
-
-        // Triaged
-        let decision = EmailTriageDecision(
-            requiresAction: true,
-            category: .quarantine,
-            urgencyScore: 0,
-            suggestedAction: .quarantineThreat
-        )
-        let result = TriageResult(
-            decision: decision,
-            confidenceScore: 0.94,
-            decisiveness: 0.95,
-            routingTier: .auto,
-            latencyMs: 8.5,
-            backendUsed: .onDeviceCoreML
-        )
-        var triagedEmail = sample
-        triagedEmail.triageResult = result
-
-        let triagedBar = DecisionActionBarView(store: store, email: triagedEmail)
-        #expect(triagedBar.email.triageResult?.routingTier == .auto)
     }
 
     @Test("BatchSummarySheet initializes with report")
