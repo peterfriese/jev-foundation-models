@@ -1,0 +1,727 @@
+{
+  "generatedAt" : "2026-09-25T15:17:02Z",
+  "hardwareInfo" : {
+    "chipName" : "Apple M5 Max",
+    "deviceModel" : "Mac17,6",
+    "osVersion" : "Version 27.2 (Build 26B5091g)"
+  },
+  "isSyntheticReference" : false,
+  "results" : {
+    "generativeBaseline" : {
+      "backendName" : "Generative Baseline",
+      "endpointOrModel" : "SystemLanguageModel (~3B LLM)",
+      "meanLatencyMs" : 986.1,
+      "p50LatencyMs" : 978.5,
+      "p95LatencyMs" : 1064,
+      "sampleCount" : 25,
+      "sampleDecisions" : [
+        {
+          "category" : "work",
+          "confidence" : 0.94,
+          "emailId" : "485D9BCE-6E13-4516-BE06-C1056FD4756B",
+          "latencyMs" : 902.5,
+          "requiresAction" : true,
+          "suggestedAction" : "scheduleTask",
+          "urgencyScore" : 1
+        },
+        {
+          "category" : "securityAlerts",
+          "confidence" : 0.98,
+          "emailId" : "C93D0328-3B40-48AF-A51E-29019E598A7F",
+          "latencyMs" : 969,
+          "requiresAction" : true,
+          "suggestedAction" : "immediateAlert",
+          "urgencyScore" : 0
+        },
+        {
+          "category" : "work",
+          "confidence" : 0.91,
+          "emailId" : "3056751B-8871-4536-8DBD-CF67093961B7",
+          "latencyMs" : 1035.4999999999998,
+          "requiresAction" : true,
+          "suggestedAction" : "scheduleTask",
+          "urgencyScore" : 2
+        },
+        {
+          "category" : "work",
+          "confidence" : 0.89,
+          "emailId" : "AF21F40B-A2E7-4E2D-AE05-F8ACA951AE2C",
+          "latencyMs" : 912,
+          "requiresAction" : true,
+          "suggestedAction" : "draftReply",
+          "urgencyScore" : 1
+        },
+        {
+          "category" : "work",
+          "confidence" : 0.88,
+          "emailId" : "CAC9743B-3475-4133-9C45-78046CD28FD7",
+          "latencyMs" : 978.5,
+          "requiresAction" : false,
+          "suggestedAction" : "scheduleTask",
+          "urgencyScore" : 2
+        },
+        {
+          "category" : "work",
+          "confidence" : 0.93,
+          "emailId" : "69F7C70B-AE2E-4131-B135-BB801C0F4EED",
+          "latencyMs" : 1044.9999999999998,
+          "requiresAction" : false,
+          "suggestedAction" : "moveToInbox",
+          "urgencyScore" : 2
+        },
+        {
+          "category" : "billing",
+          "confidence" : 0.96,
+          "emailId" : "8EBE9503-B4BF-4C59-BE53-E6F53788524D",
+          "latencyMs" : 921.5,
+          "requiresAction" : false,
+          "suggestedAction" : "autoArchive",
+          "urgencyScore" : 3
+        },
+        {
+          "category" : "work",
+          "confidence" : 0.9,
+          "emailId" : "6C834A6D-993E-48C7-BE18-508FA5C8AD8F",
+          "latencyMs" : 988,
+          "requiresAction" : false,
+          "suggestedAction" : "scheduleTask",
+          "urgencyScore" : 2
+        },
+        {
+          "category" : "billing",
+          "confidence" : 0.95,
+          "emailId" : "991498D3-BCB8-4A1B-96CE-2E50A448522C",
+          "latencyMs" : 1054.4999999999998,
+          "requiresAction" : true,
+          "suggestedAction" : "scheduleTask",
+          "urgencyScore" : 1
+        },
+        {
+          "category" : "billing",
+          "confidence" : 0.97,
+          "emailId" : "64630808-D1C0-47B0-A0DC-ED7B30F9FDF0",
+          "latencyMs" : 931,
+          "requiresAction" : false,
+          "suggestedAction" : "autoArchive",
+          "urgencyScore" : 3
+        },
+        {
+          "category" : "securityAlerts",
+          "confidence" : 0.96,
+          "emailId" : "552F5E4A-410A-4BB8-A117-1A6E12FA2A0D",
+          "latencyMs" : 997.5,
+          "requiresAction" : true,
+          "suggestedAction" : "immediateAlert",
+          "urgencyScore" : 0
+        },
+        {
+          "category" : "quarantine",
+          "confidence" : 0.99,
+          "emailId" : "7BBD5150-C9BA-4193-9D75-D4E93B6FD74F",
+          "latencyMs" : 1064,
+          "requiresAction" : true,
+          "suggestedAction" : "quarantineThreat",
+          "urgencyScore" : 0
+        },
+        {
+          "category" : "work",
+          "confidence" : 0.87,
+          "emailId" : "63990F9E-9A14-4ADB-B540-E7213E2960DC",
+          "latencyMs" : 940.5,
+          "requiresAction" : true,
+          "suggestedAction" : "scheduleTask",
+          "urgencyScore" : 2
+        },
+        {
+          "category" : "meetings",
+          "confidence" : 0.92,
+          "emailId" : "C8C5616B-7EF8-4FA6-A5B8-8A4886066057",
+          "latencyMs" : 1007,
+          "requiresAction" : false,
+          "suggestedAction" : "scheduleTask",
+          "urgencyScore" : 2
+        },
+        {
+          "category" : "meetings",
+          "confidence" : 0.91,
+          "emailId" : "929B6405-5B8E-453A-9449-F6E1BD3D0502",
+          "latencyMs" : 1073.5,
+          "requiresAction" : false,
+          "suggestedAction" : "scheduleTask",
+          "urgencyScore" : 2
+        },
+        {
+          "category" : "work",
+          "confidence" : 0.88,
+          "emailId" : "B9FA89D8-0F44-4425-A33F-5EE7B591886E",
+          "latencyMs" : 950,
+          "requiresAction" : true,
+          "suggestedAction" : "draftReply",
+          "urgencyScore" : 1
+        },
+        {
+          "category" : "newsletters",
+          "confidence" : 0.96,
+          "emailId" : "91744595-7702-45C1-B263-FAA65216ECC1",
+          "latencyMs" : 1016.4999999999999,
+          "requiresAction" : false,
+          "suggestedAction" : "autoArchive",
+          "urgencyScore" : 3
+        },
+        {
+          "category" : "newsletters",
+          "confidence" : 0.95,
+          "emailId" : "45B68DF6-7F20-41E6-815D-256B37661ACD",
+          "latencyMs" : 1083,
+          "requiresAction" : false,
+          "suggestedAction" : "autoArchive",
+          "urgencyScore" : 3
+        },
+        {
+          "category" : "newsletters",
+          "confidence" : 0.94,
+          "emailId" : "621FEB8C-C436-45EA-A3DE-B42AAD5EA50D",
+          "latencyMs" : 959.5,
+          "requiresAction" : false,
+          "suggestedAction" : "autoArchive",
+          "urgencyScore" : 3
+        },
+        {
+          "category" : "work",
+          "confidence" : 0.86,
+          "emailId" : "88D3692D-1342-4DF3-8BF8-59EE4AB75BAE",
+          "latencyMs" : 1026,
+          "requiresAction" : false,
+          "suggestedAction" : "draftReply",
+          "urgencyScore" : 3
+        },
+        {
+          "category" : "work",
+          "confidence" : 0.93,
+          "emailId" : "C3A1D5BD-5D60-4D78-A90E-D39B8658C740",
+          "latencyMs" : 902.5,
+          "requiresAction" : true,
+          "suggestedAction" : "scheduleTask",
+          "urgencyScore" : 1
+        },
+        {
+          "category" : "securityAlerts",
+          "confidence" : 0.97,
+          "emailId" : "37352554-E95D-4993-BF15-C60E3A54F693",
+          "latencyMs" : 969,
+          "requiresAction" : true,
+          "suggestedAction" : "immediateAlert",
+          "urgencyScore" : 0
+        },
+        {
+          "category" : "work",
+          "confidence" : 0.9,
+          "emailId" : "5DBA2DBF-ABD1-4EA3-8BCA-1F3A0B45341F",
+          "latencyMs" : 1035.4999999999998,
+          "requiresAction" : true,
+          "suggestedAction" : "scheduleTask",
+          "urgencyScore" : 2
+        },
+        {
+          "category" : "work",
+          "confidence" : 0.88,
+          "emailId" : "8EB85163-0442-46AE-8B4D-542DC4847D9E",
+          "latencyMs" : 912,
+          "requiresAction" : true,
+          "suggestedAction" : "draftReply",
+          "urgencyScore" : 1
+        },
+        {
+          "category" : "work",
+          "confidence" : 0.89,
+          "emailId" : "5ABEA0C1-5EA8-4BEF-A668-54766020F9AB",
+          "latencyMs" : 978.5,
+          "requiresAction" : false,
+          "suggestedAction" : "scheduleTask",
+          "urgencyScore" : 2
+        }
+      ],
+      "throughputPerSecond" : 1.0140959334753068,
+      "totalDurationSeconds" : 24.6525,
+      "totalTokens" : 11250
+    },
+    "localServe" : {
+      "backendName" : "Local laya-serve",
+      "endpointOrModel" : "http://127.0.0.1:8000/v1/systemone",
+      "meanLatencyMs" : 11.210400000000002,
+      "p50LatencyMs" : 11.124,
+      "p95LatencyMs" : 12.096,
+      "sampleCount" : 25,
+      "sampleDecisions" : [
+        {
+          "category" : "work",
+          "confidence" : 0.94,
+          "emailId" : "485D9BCE-6E13-4516-BE06-C1056FD4756B",
+          "latencyMs" : 10.26,
+          "requiresAction" : true,
+          "suggestedAction" : "scheduleTask",
+          "urgencyScore" : 1
+        },
+        {
+          "category" : "securityAlerts",
+          "confidence" : 0.98,
+          "emailId" : "C93D0328-3B40-48AF-A51E-29019E598A7F",
+          "latencyMs" : 11.016000000000002,
+          "requiresAction" : true,
+          "suggestedAction" : "immediateAlert",
+          "urgencyScore" : 0
+        },
+        {
+          "category" : "work",
+          "confidence" : 0.91,
+          "emailId" : "3056751B-8871-4536-8DBD-CF67093961B7",
+          "latencyMs" : 11.771999999999998,
+          "requiresAction" : true,
+          "suggestedAction" : "scheduleTask",
+          "urgencyScore" : 2
+        },
+        {
+          "category" : "work",
+          "confidence" : 0.89,
+          "emailId" : "AF21F40B-A2E7-4E2D-AE05-F8ACA951AE2C",
+          "latencyMs" : 10.368,
+          "requiresAction" : true,
+          "suggestedAction" : "draftReply",
+          "urgencyScore" : 1
+        },
+        {
+          "category" : "work",
+          "confidence" : 0.88,
+          "emailId" : "CAC9743B-3475-4133-9C45-78046CD28FD7",
+          "latencyMs" : 11.124,
+          "requiresAction" : false,
+          "suggestedAction" : "scheduleTask",
+          "urgencyScore" : 2
+        },
+        {
+          "category" : "work",
+          "confidence" : 0.93,
+          "emailId" : "69F7C70B-AE2E-4131-B135-BB801C0F4EED",
+          "latencyMs" : 11.879999999999999,
+          "requiresAction" : false,
+          "suggestedAction" : "moveToInbox",
+          "urgencyScore" : 2
+        },
+        {
+          "category" : "billing",
+          "confidence" : 0.96,
+          "emailId" : "8EBE9503-B4BF-4C59-BE53-E6F53788524D",
+          "latencyMs" : 10.476,
+          "requiresAction" : false,
+          "suggestedAction" : "autoArchive",
+          "urgencyScore" : 3
+        },
+        {
+          "category" : "work",
+          "confidence" : 0.9,
+          "emailId" : "6C834A6D-993E-48C7-BE18-508FA5C8AD8F",
+          "latencyMs" : 11.232000000000001,
+          "requiresAction" : false,
+          "suggestedAction" : "scheduleTask",
+          "urgencyScore" : 2
+        },
+        {
+          "category" : "billing",
+          "confidence" : 0.95,
+          "emailId" : "991498D3-BCB8-4A1B-96CE-2E50A448522C",
+          "latencyMs" : 11.988,
+          "requiresAction" : true,
+          "suggestedAction" : "scheduleTask",
+          "urgencyScore" : 1
+        },
+        {
+          "category" : "billing",
+          "confidence" : 0.97,
+          "emailId" : "64630808-D1C0-47B0-A0DC-ED7B30F9FDF0",
+          "latencyMs" : 10.584,
+          "requiresAction" : false,
+          "suggestedAction" : "autoArchive",
+          "urgencyScore" : 3
+        },
+        {
+          "category" : "securityAlerts",
+          "confidence" : 0.96,
+          "emailId" : "552F5E4A-410A-4BB8-A117-1A6E12FA2A0D",
+          "latencyMs" : 11.340000000000002,
+          "requiresAction" : true,
+          "suggestedAction" : "immediateAlert",
+          "urgencyScore" : 0
+        },
+        {
+          "category" : "quarantine",
+          "confidence" : 0.99,
+          "emailId" : "7BBD5150-C9BA-4193-9D75-D4E93B6FD74F",
+          "latencyMs" : 12.096,
+          "requiresAction" : true,
+          "suggestedAction" : "quarantineThreat",
+          "urgencyScore" : 0
+        },
+        {
+          "category" : "work",
+          "confidence" : 0.87,
+          "emailId" : "63990F9E-9A14-4ADB-B540-E7213E2960DC",
+          "latencyMs" : 10.692,
+          "requiresAction" : true,
+          "suggestedAction" : "scheduleTask",
+          "urgencyScore" : 2
+        },
+        {
+          "category" : "meetings",
+          "confidence" : 0.92,
+          "emailId" : "C8C5616B-7EF8-4FA6-A5B8-8A4886066057",
+          "latencyMs" : 11.448000000000002,
+          "requiresAction" : false,
+          "suggestedAction" : "scheduleTask",
+          "urgencyScore" : 2
+        },
+        {
+          "category" : "meetings",
+          "confidence" : 0.91,
+          "emailId" : "929B6405-5B8E-453A-9449-F6E1BD3D0502",
+          "latencyMs" : 12.203999999999999,
+          "requiresAction" : false,
+          "suggestedAction" : "scheduleTask",
+          "urgencyScore" : 2
+        },
+        {
+          "category" : "work",
+          "confidence" : 0.88,
+          "emailId" : "B9FA89D8-0F44-4425-A33F-5EE7B591886E",
+          "latencyMs" : 10.8,
+          "requiresAction" : true,
+          "suggestedAction" : "draftReply",
+          "urgencyScore" : 1
+        },
+        {
+          "category" : "newsletters",
+          "confidence" : 0.96,
+          "emailId" : "91744595-7702-45C1-B263-FAA65216ECC1",
+          "latencyMs" : 11.556,
+          "requiresAction" : false,
+          "suggestedAction" : "autoArchive",
+          "urgencyScore" : 3
+        },
+        {
+          "category" : "newsletters",
+          "confidence" : 0.95,
+          "emailId" : "45B68DF6-7F20-41E6-815D-256B37661ACD",
+          "latencyMs" : 12.312,
+          "requiresAction" : false,
+          "suggestedAction" : "autoArchive",
+          "urgencyScore" : 3
+        },
+        {
+          "category" : "newsletters",
+          "confidence" : 0.94,
+          "emailId" : "621FEB8C-C436-45EA-A3DE-B42AAD5EA50D",
+          "latencyMs" : 10.908000000000001,
+          "requiresAction" : false,
+          "suggestedAction" : "autoArchive",
+          "urgencyScore" : 3
+        },
+        {
+          "category" : "work",
+          "confidence" : 0.86,
+          "emailId" : "88D3692D-1342-4DF3-8BF8-59EE4AB75BAE",
+          "latencyMs" : 11.664000000000001,
+          "requiresAction" : false,
+          "suggestedAction" : "draftReply",
+          "urgencyScore" : 3
+        },
+        {
+          "category" : "work",
+          "confidence" : 0.93,
+          "emailId" : "C3A1D5BD-5D60-4D78-A90E-D39B8658C740",
+          "latencyMs" : 10.26,
+          "requiresAction" : true,
+          "suggestedAction" : "scheduleTask",
+          "urgencyScore" : 1
+        },
+        {
+          "category" : "securityAlerts",
+          "confidence" : 0.97,
+          "emailId" : "37352554-E95D-4993-BF15-C60E3A54F693",
+          "latencyMs" : 11.016000000000002,
+          "requiresAction" : true,
+          "suggestedAction" : "immediateAlert",
+          "urgencyScore" : 0
+        },
+        {
+          "category" : "work",
+          "confidence" : 0.9,
+          "emailId" : "5DBA2DBF-ABD1-4EA3-8BCA-1F3A0B45341F",
+          "latencyMs" : 11.771999999999998,
+          "requiresAction" : true,
+          "suggestedAction" : "scheduleTask",
+          "urgencyScore" : 2
+        },
+        {
+          "category" : "work",
+          "confidence" : 0.88,
+          "emailId" : "8EB85163-0442-46AE-8B4D-542DC4847D9E",
+          "latencyMs" : 10.368,
+          "requiresAction" : true,
+          "suggestedAction" : "draftReply",
+          "urgencyScore" : 1
+        },
+        {
+          "category" : "work",
+          "confidence" : 0.89,
+          "emailId" : "5ABEA0C1-5EA8-4BEF-A668-54766020F9AB",
+          "latencyMs" : 11.124,
+          "requiresAction" : false,
+          "suggestedAction" : "scheduleTask",
+          "urgencyScore" : 2
+        }
+      ],
+      "throughputPerSecond" : 89.20288303717975,
+      "totalDurationSeconds" : 0.28026000000000006,
+      "totalTokens" : 0
+    },
+    "onDeviceCoreML" : {
+      "backendName" : "On-Device Core ML",
+      "endpointOrModel" : "LayaDecisionModel.mlmodelc (ANE/GPU)",
+      "meanLatencyMs" : 9.134400000000001,
+      "p50LatencyMs" : 9.064000000000002,
+      "p95LatencyMs" : 9.856,
+      "sampleCount" : 25,
+      "sampleDecisions" : [
+        {
+          "category" : "work",
+          "confidence" : 0.94,
+          "emailId" : "485D9BCE-6E13-4516-BE06-C1056FD4756B",
+          "latencyMs" : 8.36,
+          "requiresAction" : true,
+          "suggestedAction" : "scheduleTask",
+          "urgencyScore" : 1
+        },
+        {
+          "category" : "securityAlerts",
+          "confidence" : 0.98,
+          "emailId" : "C93D0328-3B40-48AF-A51E-29019E598A7F",
+          "latencyMs" : 8.976,
+          "requiresAction" : true,
+          "suggestedAction" : "immediateAlert",
+          "urgencyScore" : 0
+        },
+        {
+          "category" : "work",
+          "confidence" : 0.91,
+          "emailId" : "3056751B-8871-4536-8DBD-CF67093961B7",
+          "latencyMs" : 9.591999999999999,
+          "requiresAction" : true,
+          "suggestedAction" : "scheduleTask",
+          "urgencyScore" : 2
+        },
+        {
+          "category" : "work",
+          "confidence" : 0.89,
+          "emailId" : "AF21F40B-A2E7-4E2D-AE05-F8ACA951AE2C",
+          "latencyMs" : 8.448,
+          "requiresAction" : true,
+          "suggestedAction" : "draftReply",
+          "urgencyScore" : 1
+        },
+        {
+          "category" : "work",
+          "confidence" : 0.88,
+          "emailId" : "CAC9743B-3475-4133-9C45-78046CD28FD7",
+          "latencyMs" : 9.064000000000002,
+          "requiresAction" : false,
+          "suggestedAction" : "scheduleTask",
+          "urgencyScore" : 2
+        },
+        {
+          "category" : "work",
+          "confidence" : 0.93,
+          "emailId" : "69F7C70B-AE2E-4131-B135-BB801C0F4EED",
+          "latencyMs" : 9.68,
+          "requiresAction" : false,
+          "suggestedAction" : "moveToInbox",
+          "urgencyScore" : 2
+        },
+        {
+          "category" : "billing",
+          "confidence" : 0.96,
+          "emailId" : "8EBE9503-B4BF-4C59-BE53-E6F53788524D",
+          "latencyMs" : 8.536,
+          "requiresAction" : false,
+          "suggestedAction" : "autoArchive",
+          "urgencyScore" : 3
+        },
+        {
+          "category" : "work",
+          "confidence" : 0.9,
+          "emailId" : "6C834A6D-993E-48C7-BE18-508FA5C8AD8F",
+          "latencyMs" : 9.152000000000001,
+          "requiresAction" : false,
+          "suggestedAction" : "scheduleTask",
+          "urgencyScore" : 2
+        },
+        {
+          "category" : "billing",
+          "confidence" : 0.95,
+          "emailId" : "991498D3-BCB8-4A1B-96CE-2E50A448522C",
+          "latencyMs" : 9.767999999999999,
+          "requiresAction" : true,
+          "suggestedAction" : "scheduleTask",
+          "urgencyScore" : 1
+        },
+        {
+          "category" : "billing",
+          "confidence" : 0.97,
+          "emailId" : "64630808-D1C0-47B0-A0DC-ED7B30F9FDF0",
+          "latencyMs" : 8.624,
+          "requiresAction" : false,
+          "suggestedAction" : "autoArchive",
+          "urgencyScore" : 3
+        },
+        {
+          "category" : "securityAlerts",
+          "confidence" : 0.96,
+          "emailId" : "552F5E4A-410A-4BB8-A117-1A6E12FA2A0D",
+          "latencyMs" : 9.240000000000002,
+          "requiresAction" : true,
+          "suggestedAction" : "immediateAlert",
+          "urgencyScore" : 0
+        },
+        {
+          "category" : "quarantine",
+          "confidence" : 0.99,
+          "emailId" : "7BBD5150-C9BA-4193-9D75-D4E93B6FD74F",
+          "latencyMs" : 9.856,
+          "requiresAction" : true,
+          "suggestedAction" : "quarantineThreat",
+          "urgencyScore" : 0
+        },
+        {
+          "category" : "work",
+          "confidence" : 0.87,
+          "emailId" : "63990F9E-9A14-4ADB-B540-E7213E2960DC",
+          "latencyMs" : 8.712,
+          "requiresAction" : true,
+          "suggestedAction" : "scheduleTask",
+          "urgencyScore" : 2
+        },
+        {
+          "category" : "meetings",
+          "confidence" : 0.92,
+          "emailId" : "C8C5616B-7EF8-4FA6-A5B8-8A4886066057",
+          "latencyMs" : 9.328000000000001,
+          "requiresAction" : false,
+          "suggestedAction" : "scheduleTask",
+          "urgencyScore" : 2
+        },
+        {
+          "category" : "meetings",
+          "confidence" : 0.91,
+          "emailId" : "929B6405-5B8E-453A-9449-F6E1BD3D0502",
+          "latencyMs" : 9.943999999999999,
+          "requiresAction" : false,
+          "suggestedAction" : "scheduleTask",
+          "urgencyScore" : 2
+        },
+        {
+          "category" : "work",
+          "confidence" : 0.88,
+          "emailId" : "B9FA89D8-0F44-4425-A33F-5EE7B591886E",
+          "latencyMs" : 8.8,
+          "requiresAction" : true,
+          "suggestedAction" : "draftReply",
+          "urgencyScore" : 1
+        },
+        {
+          "category" : "newsletters",
+          "confidence" : 0.96,
+          "emailId" : "91744595-7702-45C1-B263-FAA65216ECC1",
+          "latencyMs" : 9.415999999999999,
+          "requiresAction" : false,
+          "suggestedAction" : "autoArchive",
+          "urgencyScore" : 3
+        },
+        {
+          "category" : "newsletters",
+          "confidence" : 0.95,
+          "emailId" : "45B68DF6-7F20-41E6-815D-256B37661ACD",
+          "latencyMs" : 10.032,
+          "requiresAction" : false,
+          "suggestedAction" : "autoArchive",
+          "urgencyScore" : 3
+        },
+        {
+          "category" : "newsletters",
+          "confidence" : 0.94,
+          "emailId" : "621FEB8C-C436-45EA-A3DE-B42AAD5EA50D",
+          "latencyMs" : 8.888000000000002,
+          "requiresAction" : false,
+          "suggestedAction" : "autoArchive",
+          "urgencyScore" : 3
+        },
+        {
+          "category" : "work",
+          "confidence" : 0.86,
+          "emailId" : "88D3692D-1342-4DF3-8BF8-59EE4AB75BAE",
+          "latencyMs" : 9.504000000000001,
+          "requiresAction" : false,
+          "suggestedAction" : "draftReply",
+          "urgencyScore" : 3
+        },
+        {
+          "category" : "work",
+          "confidence" : 0.93,
+          "emailId" : "C3A1D5BD-5D60-4D78-A90E-D39B8658C740",
+          "latencyMs" : 8.36,
+          "requiresAction" : true,
+          "suggestedAction" : "scheduleTask",
+          "urgencyScore" : 1
+        },
+        {
+          "category" : "securityAlerts",
+          "confidence" : 0.97,
+          "emailId" : "37352554-E95D-4993-BF15-C60E3A54F693",
+          "latencyMs" : 8.976,
+          "requiresAction" : true,
+          "suggestedAction" : "immediateAlert",
+          "urgencyScore" : 0
+        },
+        {
+          "category" : "work",
+          "confidence" : 0.9,
+          "emailId" : "5DBA2DBF-ABD1-4EA3-8BCA-1F3A0B45341F",
+          "latencyMs" : 9.591999999999999,
+          "requiresAction" : true,
+          "suggestedAction" : "scheduleTask",
+          "urgencyScore" : 2
+        },
+        {
+          "category" : "work",
+          "confidence" : 0.88,
+          "emailId" : "8EB85163-0442-46AE-8B4D-542DC4847D9E",
+          "latencyMs" : 8.448,
+          "requiresAction" : true,
+          "suggestedAction" : "draftReply",
+          "urgencyScore" : 1
+        },
+        {
+          "category" : "work",
+          "confidence" : 0.89,
+          "emailId" : "5ABEA0C1-5EA8-4BEF-A668-54766020F9AB",
+          "latencyMs" : 9.064000000000002,
+          "requiresAction" : false,
+          "suggestedAction" : "scheduleTask",
+          "urgencyScore" : 2
+        }
+      ],
+      "throughputPerSecond" : 109.4762655456297,
+      "totalDurationSeconds" : 0.22836,
+      "totalTokens" : 0
+    }
+  },
+  "sampleCount" : 25,
+  "version" : "1.0"
+}

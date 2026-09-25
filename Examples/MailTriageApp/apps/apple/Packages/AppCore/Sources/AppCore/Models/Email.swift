@@ -19,6 +19,7 @@ public struct Email: Identifiable, Sendable, Hashable, Codable {
     public var urgencyScore: Int?
     public var requiresAction: Bool?
     public var suggestedAction: String?
+    public var triageResult: TriageResult?
 
     public init(
         id: UUID = UUID(),
@@ -36,7 +37,8 @@ public struct Email: Identifiable, Sendable, Hashable, Codable {
         category: EmailCategory? = nil,
         urgencyScore: Int? = nil,
         requiresAction: Bool? = nil,
-        suggestedAction: String? = nil
+        suggestedAction: String? = nil,
+        triageResult: TriageResult? = nil
     ) {
         self.id = id
         self.sender = sender
@@ -54,6 +56,7 @@ public struct Email: Identifiable, Sendable, Hashable, Codable {
         self.urgencyScore = urgencyScore
         self.requiresAction = requiresAction
         self.suggestedAction = suggestedAction
+        self.triageResult = triageResult
     }
 
     /// Extracted initials for avatar monogram rendering (e.g. "JD" for "Jeff Dean")
@@ -69,5 +72,10 @@ public struct Email: Identifiable, Sendable, Hashable, Codable {
             return String(first.prefix(2)).uppercased()
         }
         return "EM"
+    }
+
+    /// User-facing formatted timestamp
+    public var formattedDate: String {
+        date.formatted(date: .abbreviated, time: .shortened)
     }
 }

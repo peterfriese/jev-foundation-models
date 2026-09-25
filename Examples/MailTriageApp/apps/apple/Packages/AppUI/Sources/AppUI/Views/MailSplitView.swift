@@ -9,6 +9,7 @@ public struct MailSplitView: View {
     public init() {}
 
     public var body: some View {
+        @Bindable var boundStore = store
         NavigationSplitView(columnVisibility: $columnVisibility) {
             MailSidebarView(store: store)
                 #if os(macOS)
@@ -17,7 +18,7 @@ public struct MailSplitView: View {
         } content: {
             MailListView(store: store)
                 #if os(macOS)
-                .navigationSplitViewColumnWidth(min: 300, ideal: 360, max: 480)
+                .navigationSplitViewColumnWidth(min: 380, ideal: 440, max: 620)
                 #endif
         } detail: {
             MailDetailView(store: store)
@@ -26,6 +27,17 @@ public struct MailSplitView: View {
                 #endif
         }
         .navigationSplitViewStyle(.balanced)
+        #if os(macOS)
+        .frame(minWidth: 940, minHeight: 600)
+        #endif
+        .sheet(isPresented: $boundStore.showingBatchSummary) {
+            if let report = store.latestBatchReport {
+                BatchSummarySheet(report: report)
+            }
+        }
+        .sheet(isPresented: $boundStore.showingSettings) {
+            SettingsView()
+        }
     }
 }
 

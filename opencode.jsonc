@@ -1,0 +1,95 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "default_agent": "chief-of-staff",
+  "skills": {
+    "paths": [
+      "skills",
+      ".opencode/skills"
+    ]
+  },
+  "agent": {
+    "chief-of-staff": {
+      "mode": "primary",
+      "permission": {
+        "edit": "deny",
+        "bash": "deny",
+        "task": {
+          "*": "allow"
+        }
+      }
+    },
+    "code-reviewer": {
+      "mode": "all",
+      "permission": {
+        "read": "allow"
+      },
+      "skills": [
+        "universal-agent-reviews",
+        "apple-twostraws-concurrency"
+      ]
+    },
+    "docs-writer": {
+      "mode": "all",
+      "permission": {
+        "edit": "allow",
+        "bash": "allow"
+      }
+    },
+    "ios-engineer": {
+      "mode": "all",
+      "permission": {
+        "edit": "allow",
+        "bash": "allow"
+      },
+      "skills": [
+        "apple-stratos",
+        "apple-twostraws-swiftui",
+        "apple-twostraws-concurrency",
+        "apple-twostraws-testing",
+        "apple-flo-liquid-glass",
+        "apple-rocketsim"
+      ]
+    },
+    "journal-agent": {
+      "mode": "all",
+      "permission": {
+        "edit": "allow"
+      }
+    },
+    "learnings-agent": {
+      "mode": "all",
+      "permission": {
+        "edit": "allow"
+      }
+    },
+    "product-manager": {
+      "mode": "all",
+      "permission": {
+        "edit": "allow",
+        "bash": "allow"
+      }
+    },
+    "qa-agent": {
+      "mode": "all",
+      "permission": {
+        "edit": "allow",
+        "bash": "allow"
+      },
+      "skills": [
+        "apple-rocketsim",
+        "apple-twostraws-testing"
+      ]
+    },
+    "senior-architect": {
+      "mode": "all",
+      "permission": {
+        "edit": "allow",
+        "bash": "allow"
+      },
+      "skills": [
+        "universal-archify",
+        "apple-stratos"
+      ]
+    }
+  }
+}

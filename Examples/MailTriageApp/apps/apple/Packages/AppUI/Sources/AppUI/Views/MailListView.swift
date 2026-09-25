@@ -145,48 +145,225 @@ public struct MailListView: View {
             }
         }
         .toolbar {
-            #if os(macOS)
             ToolbarItemGroup(placement: .primaryAction) {
-                Button {
-                    withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
-                        store.unreadOnly.toggle()
-                    }
-                } label: {
-                    Image(systemName: store.unreadOnly ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
-                }
-                .help(store.unreadOnly ? "Show All Messages" : "Filter by Unread Only")
-
-                Menu {
-                    Toggle("Filter by Unread Only", isOn: $store.unreadOnly)
-                    Divider()
-                    Button("Mark All as Read") {
-                        withAnimation {
-                            store.markAllAsRead()
+                // Group 1: Approach Dropdown + Sparkly Triage All Button
+                ControlGroup {
+                    // Approach dropdown menu
+                    Menu {
+                        Section("Decision Model Topologies") {
+                            ForEach(TriageBackend.allCases.filter(\.isDecisionModel)) { backend in
+                                Button {
+                                    withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                                        store.selectedBackend = backend
+                                    }
+                                } label: {
+                                    HStack {
+                                        Label(backend.displayName, systemImage: backend.iconName)
+                                        if store.selectedBackend == backend {
+                                            Image(systemName: "checkmark")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        Section("Baseline Comparison") {
+                            ForEach(TriageBackend.allCases.filter { !$0.isDecisionModel }) { backend in
+                                Button {
+                                    withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                                        store.selectedBackend = backend
+                                    }
+                                } label: {
+                                    HStack {
+                                        Label(backend.displayName, systemImage: backend.iconName)
+                                        if store.selectedBackend == backend {
+                                            Image(systemName: "checkmark")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: store.selectedBackend.iconName)
+                            Text(store.selectedBackend.shortName)
+                                .font(.caption.weight(.medium))
                         }
                     }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                }
-                .help("More Actions")
-            }
-            #else
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
-                        store.unreadOnly.toggle()
+                    .help("Select Triage Approach: \(store.selectedBackend.displayName)")
+
+                    // Sparkly Triage All Button
+                    Button {
+                        if !store.isBatchTriaging {
+                            Task {
+                                await store.triageAllEmails()
+                            }
+                        }
+                    } label: {
+                        if store.isBatchTriaging {
+                            HStack(spacing: 4) {
+                                ProgressView()
+                                    .controlSize(.small)
+                                Text("\(store.batchProgress.processed)/\(store.batchProgress.total)")
+                                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                            }
+                            .padding(.horizontal, 4)
+                        } else {
+                            Image(systemName: "sparkles")
+                                .foregroundStyle(Color.accentColor)
+                        }
                     }
-                } label: {
-                    Image(systemName: store.unreadOnly ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+                    .disabled(store.isBatchTriaging)
+                    .help(store.isBatchTriaging ? "Triaging Inbox..." : "Triage All with \(store.selectedBackend.displayName)")
                 }
-                .help(store.unreadOnly ? "Show All Messages" : "Filter by Unread Only")
+
+                Spacer()
+
+                // Group 2: Filter Icon + Three-Dotted Menu
+                ControlGroup {
+                    Button {
+                        withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                            store.unreadOnly.toggle()
+                        }
+                    } label: {
+                        Image(systemName: "line.3.horizontal.decrease")
+                            .foregroundStyle(store.unreadOnly ? Color.accentColor : Color.primary)
+                    }
+                    .help(store.unreadOnly ? "Show All Messages" : "Filter by Unread Only")
+
+                    Menu {
+                        Toggle("Filter by Unread Only", isOn: $store.unreadOnly)
+                        Divider()
+                        Button("Mark All as Read") {
+                            withAnimation {
+                                store.markAllAsRead()
+                            }
+                        }
+                        Divider()
+                        Button("Reset Inbox & Triage State", systemImage: "arrow.counterclockwise") {
+                            withAnimation {
+                                store.resetData()
+                            }
+                        }
+                        Divider()
+                        Button("Settings...", systemImage: "gearshape") {
+                            openSettings()
+                        }
+                        .keyboardShortcut(",", modifiers: .command)
+                    } label: {
+                        Image(systemName: "ellipsis")
+                    }
+                    .help("More Options")
+                }
             }
-            #endif
         }
-        #if os(iOS)
         .safeAreaInset(edge: .top) {
-            filterStatusHeader
+            VStack(spacing: 0) {
+                if let error = store.activeBackendError {
+                    backendWarningBanner(error: error)
+                }
+                if store.isBatchTriaging {
+                    batchProgressHeader
+                }
+                #if os(iOS)
+                filterStatusHeader
+                #endif
+            }
         }
-        #endif
+        .task {
+            await store.probeActiveBackend()
+        }
+    }
+
+    private func backendWarningBanner(error: BackendUnreachableError) -> some View {
+        let isPreparing = error.isPreparing
+        let themeColor: Color = isPreparing ? .orange : .red
+        let iconName = isPreparing ? "arrow.down.circle.fill" : "exclamationmark.triangle.fill"
+        let titleText = isPreparing ? "\(error.backend.displayName) Preparing" : "\(error.backend.displayName) Unreachable"
+
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: iconName)
+                    .foregroundStyle(.white)
+                    .font(.body.weight(.bold))
+                    .padding(6)
+                    .background(themeColor.opacity(0.85), in: RoundedRectangle(cornerRadius: 6))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack {
+                        Text(titleText)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.primary)
+
+                        Spacer()
+
+                        Button {
+                            Task { await store.probeActiveBackend() }
+                        } label: {
+                            Image(systemName: "arrow.clockwise")
+                                .font(.caption)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Retry Health Probe")
+                    }
+
+                    Text(error.reason)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(themeColor)
+
+                    Text(error.guidance)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            HStack {
+                Spacer()
+                Button("Open Settings (⌘,)") {
+                    openSettings()
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+            }
+        }
+        .padding(12)
+        .background(themeColor.opacity(0.08))
+        .overlay(
+            Rectangle()
+                .stroke(themeColor.opacity(0.25), lineWidth: 1)
+        )
+    }
+
+    private func openSettings() {
+        store.showingSettings = true
+    }
+
+    private var batchProgressHeader: some View {
+        VStack(spacing: 4) {
+            HStack {
+                HStack(spacing: 6) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("Triaging Inbox with \(store.selectedBackend.shortName)...")
+                        .font(.caption.weight(.medium))
+                }
+                Spacer()
+                Text("\(store.batchProgress.processed) of \(store.batchProgress.total)")
+                    .font(.caption2.monospacedDigit().weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
+
+            ProgressView(
+                value: Double(store.batchProgress.processed),
+                total: Double(max(store.batchProgress.total, 1))
+            )
+            .progressViewStyle(.linear)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(.ultraThinMaterial)
+        .overlay(
+            Divider(), alignment: .bottom
+        )
     }
 
     #if os(iOS)

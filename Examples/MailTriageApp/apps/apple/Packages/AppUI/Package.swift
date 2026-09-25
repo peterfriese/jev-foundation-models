@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "AppUI",
-    platforms: [.iOS(.v17), .macOS(.v14)],
+    platforms: [.iOS("27.0"), .macOS("27.0")],
     products: [
         .library(name: "AppUI", targets: ["AppUI"]),
     ],

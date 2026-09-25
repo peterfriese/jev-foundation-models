@@ -4,6 +4,9 @@ import AppCore
 public struct MailDetailView: View {
     @Bindable public var store: MailStore
     @State private var showingComposeSheet = false
+    @State private var composeTo = ""
+    @State private var composeSubject = ""
+    @State private var composeBody = ""
 
     public init(store: MailStore) {
         self.store = store
@@ -23,9 +26,25 @@ public struct MailDetailView: View {
         }
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
+                // Triage with Model Button
+                Button {
+                    Task {
+                        await store.triageSelectedEmail()
+                    }
+                } label: {
+                    if store.isTriagingSingleEmail {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        Image(systemName: "sparkles")
+                    }
+                }
+                .disabled(store.selectedEmail == nil || store.isTriagingSingleEmail)
+                .help("Triage with \(store.selectedBackend.displayName)")
+
                 // Compose
                 Button {
-                    showingComposeSheet = true
+                    openCompose(to: "", subject: "", body: "")
                 } label: {
                     Image(systemName: "square.and.pencil")
                 }
@@ -33,7 +52,10 @@ public struct MailDetailView: View {
 
                 // Reply Actions
                 Button {
-                    // Reply
+                    if let email = store.selectedEmail {
+                        let quote = "\n\nOn \(email.date.formatted(date: .abbreviated, time: .shortened)), \(email.sender) wrote:\n> \(email.body.replacingOccurrences(of: "\n", with: "\n> "))"
+                        openCompose(to: email.senderEmail, subject: "Re: \(email.subject)", body: quote)
+                    }
                 } label: {
                     Image(systemName: "arrowshape.turn.up.left")
                 }
@@ -41,7 +63,13 @@ public struct MailDetailView: View {
                 .help("Reply")
 
                 Button {
-                    // Reply All
+                    if let email = store.selectedEmail {
+                        let toField = email.recipient.isEmpty || email.recipient == email.senderEmail
+                            ? email.senderEmail
+                            : "\(email.senderEmail), \(email.recipient)"
+                        let quote = "\n\nOn \(email.date.formatted(date: .abbreviated, time: .shortened)), \(email.sender) wrote:\n> \(email.body.replacingOccurrences(of: "\n", with: "\n> "))"
+                        openCompose(to: toField, subject: "Re: \(email.subject)", body: quote)
+                    }
                 } label: {
                     Image(systemName: "arrowshape.turn.up.left.2")
                 }
@@ -49,7 +77,20 @@ public struct MailDetailView: View {
                 .help("Reply All")
 
                 Button {
-                    // Forward
+                    if let email = store.selectedEmail {
+                        let forwardQuote = """
+
+
+---------- Forwarded message ---------
+From: \(email.sender) <\(email.senderEmail)>
+Date: \(email.date.formatted(date: .abbreviated, time: .shortened))
+Subject: \(email.subject)
+To: \(email.recipient)
+
+\(email.body)
+"""
+                        openCompose(to: "", subject: "Fwd: \(email.subject)", body: forwardQuote)
+                    }
                 } label: {
                     Image(systemName: "arrowshape.turn.up.right")
                 }
@@ -149,7 +190,13 @@ public struct MailDetailView: View {
             }
         }
         .sheet(isPresented: $showingComposeSheet) {
-            ComposeMessageSheet()
+            ComposeMessageSheet(
+                store: store,
+                to: composeTo,
+                subject: composeSubject,
+                initialBody: composeBody
+            )
+            .id("\(composeTo)-\(composeSubject)-\(showingComposeSheet)")
         }
     }
 
@@ -233,32 +280,39 @@ public struct MailDetailView: View {
                 if let category = email.category {
                     Label(category.displayName, systemImage: category.iconName)
                         .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.accentColor)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(Color.accentColor.opacity(0.12), in: Capsule())
+                        .background(Color.accentColor.opacity(0.14), in: Capsule())
+                        .overlay(
+                            Capsule()
+                                .stroke(Color.accentColor.opacity(0.25), lineWidth: 0.5)
+                        )
                 } else if email.mailbox != .inbox {
                     Label(email.mailbox.title, systemImage: email.mailbox.iconName)
                         .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(Color.secondary.opacity(0.12), in: Capsule())
+                        .background(Color.secondary.opacity(0.14), in: Capsule())
+                        .overlay(
+                            Capsule()
+                                .stroke(Color.secondary.opacity(0.25), lineWidth: 0.5)
+                        )
                 }
 
                 if let score = email.urgencyScore {
-                    let (label, color): (String, Color) = {
-                        switch score {
-                        case 3: return ("P0 Critical", .red)
-                        case 2: return ("P1 High", .orange)
-                        case 1: return ("P2 Medium", .blue)
-                        default: return ("P3 Low", .secondary)
-                        }
-                    }()
-                    Text(label)
+                    let priority = UrgencyPriority.from(score: score)
+                    Text(priority.displayName)
                         .font(.caption.weight(.bold))
-                        .foregroundStyle(color)
+                        .foregroundStyle(priority.color)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(color.opacity(0.12), in: Capsule())
+                        .background(priority.color.opacity(0.14), in: Capsule())
+                        .overlay(
+                            Capsule()
+                                .stroke(priority.color.opacity(0.25), lineWidth: 0.5)
+                        )
                 }
 
                 Spacer()
@@ -278,18 +332,29 @@ public struct MailDetailView: View {
             }
 
             if let action = email.suggestedAction {
-                HStack {
+                HStack(spacing: 6) {
                     Image(systemName: "sparkles")
                         .foregroundStyle(.tint)
                         .font(.caption)
                     Text("Suggested: \(action)")
                         .font(.caption.weight(.medium))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.primary.opacity(0.85))
                 }
             }
         }
         .padding(12)
-        .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+        )
+    }
+
+    private func openCompose(to: String, subject: String, body: String) {
+        composeTo = to
+        composeSubject = subject
+        composeBody = body
+        showingComposeSheet = true
     }
 
     private func avatarColor(for name: String) -> Color {
@@ -299,13 +364,26 @@ public struct MailDetailView: View {
     }
 }
 
-private struct ComposeMessageSheet: View {
+public struct ComposeMessageSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var toText = ""
-    @State private var subjectText = ""
-    @State private var bodyText = ""
+    public var store: MailStore?
+    @State public var toText: String
+    @State public var subjectText: String
+    @State public var bodyText: String
 
-    var body: some View {
+    public init(
+        store: MailStore? = nil,
+        to: String = "",
+        subject: String = "",
+        initialBody: String = ""
+    ) {
+        self.store = store
+        _toText = State(initialValue: to)
+        _subjectText = State(initialValue: subject)
+        _bodyText = State(initialValue: initialBody)
+    }
+
+    public var body: some View {
         NavigationStack {
             Form {
                 Section {
@@ -330,6 +408,7 @@ private struct ComposeMessageSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Send") {
+                        store?.sendEmail(to: toText, subject: subjectText, body: bodyText)
                         dismiss()
                     }
                     .disabled(toText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)

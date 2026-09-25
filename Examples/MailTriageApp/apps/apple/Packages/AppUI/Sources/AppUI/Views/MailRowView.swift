@@ -64,12 +64,15 @@ public struct MailRowView: View {
                     Text(category.displayName)
                         .font(.system(size: 10, weight: .medium))
 
-                    if let score = email.urgencyScore, score >= 2 {
-                        Text("•")
-                            .font(.system(size: 8))
-                        Text(score == 3 ? "P0 Critical" : "P1 High")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(score == 3 ? .red : .orange)
+                    if let score = email.urgencyScore {
+                        let priority = UrgencyPriority.from(score: score)
+                        if priority == .p0Critical || priority == .p1High {
+                            Text("•")
+                                .font(.system(size: 8))
+                            Text(priority.displayName)
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundStyle(priority.color)
+                        }
                     }
                 }
                 .foregroundStyle(.secondary)

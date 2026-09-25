@@ -96,10 +96,11 @@ The inbox must reflect a realistic developer/Googler mail stream:
   - Full email body, contact avatar monogram, headers, and formatted date.
   - Centered *"No Message Selected"* empty state when unselected.
 
-### B. Tasteful Liquid Glass Design
-- Strictly follow Apple's Liquid Glass guidelines (`swiftui-liquid-glass`):
+### B. Tasteful Liquid Glass Design & Toolbar Triage Ergonomics
+- Strictly follow Apple's Liquid Glass guidelines (`swiftui-liquid-glass`) and native Apple Mail design patterns:
   - **Toolbar Backend Selector**: Compact, elegant Liquid Glass grouped capsule (`GlassEffectContainer`) centered in the toolbar that does not crowd out standard mail action buttons.
-  - **Decision Action Bar**: Floating bottom drawer anchored via `.safeAreaBar(edge: .bottom)` displaying decision status and prominent execution buttons (`.buttonStyle(.glassProminent)` and `.buttonStyle(.glass)`).
+  - **Primary Toolbar Triage**: Single-email triage is triggered directly from the primary navigation toolbar (via the dedicated sparkles "Triage Message" button in the toolbar). Batch triage is triggered via the toolbar "Triage All" button in the message list.
+  - **Triage Outcome Header Banner**: Triage outcome metadata (category pill, urgency score badge, suggested action, and confidence) is cleanly presented in the email header banner of `MailDetailView` and in the message list rows, preserving standard Apple Mail reading ergonomics without obstructing content or requiring a floating bottom action drawer.
   - **Zero Glass Inside Lists**: List and scroll view rows use high-performance system materials to guarantee 120Hz ProMotion scrolling.
 
 ### C. Fluid Animations & Motion

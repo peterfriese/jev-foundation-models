@@ -1,5 +1,7 @@
 import Foundation
+import FoundationModels
 
+@Generable
 public enum EmailCategory: String, Identifiable, CaseIterable, Sendable, Codable, Hashable {
     case securityAlerts
     case billing

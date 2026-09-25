@@ -28,3 +28,4 @@ Welcome to the documentation for **Jev Foundation Models**, the Swift 6 library 
 ## 🛠️ Field Notes
 
 * [**Tech Notes (`tech-notes/`)**](../tech-notes/README.md): Documented technical findings, SDK quirks, and runtime observations.
+* [**Engineering Journal (`docs/journal/`)**](journal/OVERVIEW.md): Chronological daily engineering trajectory, decisions, and remediation milestones.
