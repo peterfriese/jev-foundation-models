@@ -2,7 +2,7 @@ import Foundation
 
 /// A native Swift Byte-level BPE / WordPiece tokenizer for ModernBERT backbones (`laya` 421M and `laya-typed-decisions`).
 ///
-/// See `tech-notes/0007-on-device-coreml-decision-engine.md`.
+/// See `tech-notes/0008-on-device-coreml-decision-engine.md`.
 public struct ModernBERTTokenizer: LayaTokenizer, Sendable {
     public let clsTokenId: Int
     public let sepTokenId: Int
