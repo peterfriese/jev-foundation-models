@@ -3,7 +3,7 @@ import SystemOneCore
 
 /// Utilities for temperature scaling and calibrated confidence calculation.
 ///
-/// See `tech-notes/0007-on-device-coreml-decision-engine.md`.
+/// See `tech-notes/0008-on-device-coreml-decision-engine.md`.
 public struct TemperatureCalibration: Sendable {
     public static let tempMin: Double = 0.5
     public static let tempMax: Double = 5.0

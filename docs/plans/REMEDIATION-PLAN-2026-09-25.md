@@ -41,7 +41,7 @@ Use this high-level matrix to view the triage status and record decisions before
 | **SIM-1** | Real Inference | Remove silent mock predictor fallback in `TriageEngine` | **Critical** | `AppCore/TriageEngine.swift` | `[x] Approved` |
 | **SIM-2** | Real Inference | Reject raw `.safetensors` as compiled Core ML models | **High** | `AppCore/CoreMLModelManager.swift` | `[x] Approved` |
 | **SIM-3** | Real Inference | Enforce benchmark ground-truth checksum & live parity | **Medium** | `AppCore/BenchmarkTruthStore.swift`, `AppCoreTests` | `[x] Approved` |
-| **PRD-1** | PRD Compliance | Retain toolbar triage & align PRDs (no UI code changes) | **High** | `docs/mail-triage-prd.md`, PRD specs | `[x] Modified (PRD Update Only, No Code Changes)` |
+| **PRD-1** | PRD Compliance | Retain toolbar triage & align PRDs (no UI code changes) | **High** | `docs/prd/PRD-2026-09-25-mail-triage-system-one-engine.md`, PRD specs | `[x] Modified (PRD Update Only, No Code Changes)` |
 | **PRD-2** | PRD Compliance | Fix inverted urgency score rubric (0=P0 vs 3=P0) in detail banner | **High** | `AppUI/MailDetailView.swift` | `[x] Approved` |
 | **PRD-3** | PRD Compliance | Wire functional stubs for Reply, Forward, and Compose | **Medium** | `AppUI/MailDetailView.swift` | `[x] Approved` |
 | **PRD-4** | PRD Compliance | Polish multi-window minimum sizing & Liquid Glass contrast | **Low** | `AppUI/MailSplitView.swift`, `MailTriageAppApp.swift` | `[x] Approved` |
@@ -382,17 +382,17 @@ A `.safetensors` file is a raw binary key-value tensor container used by PyTorch
 
 - **Identifier**: `PRD-1`
 - **Severity**: **High** (Specification Alignment / PRD Update Only)
-- **File Location**: `docs/mail-triage-prd.md` & `docs/prd/PRD-2026-09-25-mail-triage-system-one-engine.md`
+- **File Location**: `docs/prd/PRD-2026-09-25-mail-triage-system-one-engine.md`
 
 ##### Technical Root Cause
 The original PRD-2026-09-25 (FR-4) and ADR-2026-09-25 specified that when viewing an email, a floating decision action bar using Liquid Glass styling should be anchored to the bottom of the message view. During implementation, the triage action was intentionally elevated into the primary application navigation surface—specifically, the sparkles toolbar button in `MailDetailView` and the "Triage All" button in `MailListView`. A floating bottom bar is redundant and detracts from message reading viewport space.
 
 ##### Remediation Plan
 1. **Retain Main Toolbar Triage Architecture (No UI Code Changes)**: The triage action belongs in the main toolbar (which is already implemented via the sparkles button in `MailDetailView` toolbar and "Triage All" in `MailListView`). DO NOT modify UI code to force a bottom bar.
-2. **Update PRD Specifications**: Update the PRDs (`docs/mail-triage-prd.md` and `docs/prd/PRD-2026-09-25-mail-triage-system-one-engine.md`) to formally align with this architectural decision, establishing the main toolbar as the standard interaction locus for triage.
+2. **Update PRD Specifications**: Update the PRD (`docs/prd/PRD-2026-09-25-mail-triage-system-one-engine.md`) to formally align with this architectural decision, establishing the main toolbar as the standard interaction locus for triage.
 
 ##### Verification Steps
-- Verify `docs/mail-triage-prd.md` and `docs/prd/PRD-2026-09-25-mail-triage-system-one-engine.md` are updated to document the toolbar triage action pattern instead of a floating bottom bar.
+- Verify `docs/prd/PRD-2026-09-25-mail-triage-system-one-engine.md` is updated to document the toolbar triage action pattern instead of a floating bottom bar.
 - Verify `MailDetailView` sparkles button and `MailListView` "Triage All" toolbar button function as expected.
 
 ##### 🗳️ User Decision
@@ -402,7 +402,7 @@ The original PRD-2026-09-25 (FR-4) and ADR-2026-09-25 specified that when viewin
 - [ ] **Reject (Skip / Do not implement)**
 
 **Decision Notes / Specific Instructions**:
-> The triage action belongs in the main toolbar (which is already implemented via the sparkles button in `MailDetailView` toolbar and "Triage All" in `MailListView`). DO NOT modify UI code to force a bottom bar. Instead, update the PRDs (`docs/mail-triage-prd.md` and `docs/prd/PRD-2026-09-25-mail-triage-system-one-engine.md`) to align with this architectural decision.
+> The triage action belongs in the main toolbar (which is already implemented via the sparkles button in `MailDetailView` toolbar and "Triage All" in `MailListView`). DO NOT modify UI code to force a bottom bar. Instead, update the PRD (`docs/prd/PRD-2026-09-25-mail-triage-system-one-engine.md`) to align with this architectural decision.
 
 ---
 
@@ -669,7 +669,7 @@ Any work completed under this remediation plan must satisfy the following strict
    - Verify the main toolbar triage action button executes triage and transitions state properly.
    - Capture video or step-by-step logs demonstrating the transition from Untriaged to Triaged state upon tapping toolbar triage.
 5. **Documentation Sync Gate**:
-   - Update `docs/mail-triage-prd.md` and `docs/prd/PRD-2026-09-25-mail-triage-system-one-engine.md` to reflect the main toolbar triage action design.
+   - Update `docs/prd/PRD-2026-09-25-mail-triage-system-one-engine.md` to reflect the main toolbar triage action design.
    - Update `tech-notes/` with any discoveries regarding Core ML model management or Swift 6 actor migrations.
    - Log completion in `docs/journal/` and synchronize `README.md`.
 
@@ -692,6 +692,6 @@ Please indicate your overall sign-off and selection below:
 > User reviewed and approved the plan with customized guidance:
 > 1. **SEC-1**: Ensure `.env` is gitignored, provide a `.env.example` sample file to check in. Write strictly into Keychain and NOT into UserDefaults.
 > 2. **SEC-2**: If the required API keys are present in the environment (`ProcessInfo.processInfo.environment`), use them, otherwise fail the respective test.
-> 3. **PRD-1**: The triage action belongs in the main toolbar (which is already implemented via the sparkles button in `MailDetailView` toolbar and "Triage All" in `MailListView`). DO NOT modify UI code to force a bottom bar. Instead, update the PRDs (`docs/mail-triage-prd.md` and `docs/prd/PRD-2026-09-25-mail-triage-system-one-engine.md`) to align with this architectural decision.
+> 3. **PRD-1**: The triage action belongs in the main toolbar (which is already implemented via the sparkles button in `MailDetailView` toolbar and "Triage All" in `MailListView`). DO NOT modify UI code to force a bottom bar. Instead, update the PRD (`docs/prd/PRD-2026-09-25-mail-triage-system-one-engine.md`) to align with this architectural decision.
 ```
 ```

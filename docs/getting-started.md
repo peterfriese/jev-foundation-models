@@ -1,56 +1,123 @@
-# Getting Started with Jev Foundation Models
+# Getting Started with System One for Apple Foundation Models
 
-This guide walks you through integrating Jev into your Apple platform application using the native Foundation Models framework.
-
----
-
-## 1. Requirements
-
-- Xcode 27+ / Swift 6.0+
-- Deployment Targets: iOS 27.0+, macOS 27.0+, visionOS 27.0+
-- A TypeSafe AI API Key ([console.typesafe.ai](https://console.typesafe.ai/keys))
-
-> [!WARNING]
-> **API Key Security in Mobile Apps**
-> Never embed or hardcode your `TYPESAFE_API_KEY` into mobile application bundles (iOS, iPadOS, visionOS). Client application bundles can be easily inspected or decompiled. For mobile clients, forward requests through a secure server proxy that injects the key (see the [Mobile Security Guide](mobile-security.md) for a complete Apple App Attest / Firebase App Check implementation), or use this package directly in backend services, macOS tools, and server-side Swift.
+This guide walks you through integrating System One decision models—including on-device Core ML with **Laya** and cloud-hosted evaluation with **TypeSafe Jev**—into your Apple platform applications using native Swift 6 and Apple's Foundation Models framework.
 
 ---
 
-## 2. Add Package Dependency
+## 🧭 Choose Your Path
+
+System One models evaluate decisions in a single forward pass without autoregressive text generation. Depending on your privacy requirements, infrastructure, and deployment architecture, choose one of three paths:
+
+```
+                          ┌───────────────────────────────┐
+                          │     Choose Your Path          │
+                          └──────────────┬────────────────┘
+                                         │
+         ┌───────────────────────────────┼───────────────────────────────┐
+         ▼                               ▼                               ▼
+ ┌───────────────┐               ┌───────────────┐               ┌───────────────┐
+ │    Path A     │               │    Path B     │               │    Path C     │
+ │  100% Offline │               │ Zero Secrets  │               │ Cloud Hosted  │
+ │  LayaOnDevice │               │ LayaFoundation│               │ JevFoundation │
+ └───────┬───────┘               └───────┬───────┘               └───────┬───────┘
+         │                               │                               │
+         ▼                               ▼                               ▼
+ • Core ML on ANE/GPU            • Local `laya-serve` (8000)     • TypeSafe AI Cloud API
+ • Zero outbound network         • Docker / Python local         • Managed high availability
+ • 0ms external latency          • Zero API key required         • `TYPESAFE_API_KEY` required
+ • Zero secrets in bundle        • Ideal for dev & staging       • Resilient retries built-in
+```
+
+### Path A: 100% Offline / Zero Secrets (`LayaOnDevice`)
+- **Engine**: Apple Neural Engine (ANE) and GPU via Apple Core ML.
+- **Privacy & Security**: Zero outbound network requests. No API keys or network credentials required.
+- **Best For**: Native iOS/macOS apps handling sensitive data (healthcare, finance, personal communications, edge devices).
+- **Target to Import**: `LayaOnDevice`
+
+### Path B: Zero Secrets / Local Docker or Python (`LayaFoundationModels`)
+- **Engine**: Self-hosted `laya-serve` instance over local HTTP (`http://127.0.0.1:8000`).
+- **Privacy & Security**: All traffic remains on your local workstation or private virtual network. No cloud billing or external API keys needed.
+- **Best For**: Rapid local prototyping, offline testing on developer machines, and private enterprise microservices.
+- **Target to Import**: `LayaFoundationModels`
+
+### Path C: Cloud-Hosted Managed Infrastructure (`JevFoundationModels`)
+- **Engine**: TypeSafe AI cloud API (`api.typesafe.ai`).
+- **Privacy & Security**: Encrypted HTTPS transport with built-in exponential backoff and jitter retries.
+- **Best For**: Server-side Swift, macOS administrative tools, or mobile apps communicating via an authenticated proxy (see [Mobile Security Guide](mobile-security.md)).
+- **Target to Import**: `JevFoundationModels` (requires `TYPESAFE_API_KEY`)
+
+---
+
+## 📦 Which Target Should I Import?
+
+The package is split into focused, modular targets so you only link the code and dependencies your project needs:
+
+| Target / Library | Primary Capability | Network Required | API Key Required | Dependencies |
+| :--- | :--- | :---: | :---: | :--- |
+| `LayaOnDevice` | 100% offline inference via Core ML on Apple Neural Engine & GPU | ❌ No | ❌ No | `SystemOneCore` |
+| `LayaFoundationModels` | Connect to local (`localhost:8000`) or self-hosted `laya-serve` instances | ✅ Yes (Local/LAN) | ❌ No (Optional token) | `SystemOneCore` |
+| `JevFoundationModels` | Connect to TypeSafe AI cloud API with exponential retries | ✅ Yes (Cloud HTTPS) | ✅ Yes (`TYPESAFE_API_KEY`) | `SystemOneCore` |
+| `SystemOneCore` | Core abstractions, `@Generable` schema translation, `RoutingPolicy`, offline mocks | ❌ No | ❌ No | None |
+| `SystemOneFoundationModels` | Umbrella module bundling Core ML, Laya HTTP, and Jev Cloud backends | Varies by backend | Varies by backend | All above |
+
+---
+
+## 🛠️ Installation
+
+### Requirements
+- **Xcode**: 27.0+
+- **Swift**: 6.0+ (Full Strict Concurrency supported)
+- **Deployment Targets**: iOS 27.0+, macOS 27.0+, visionOS 27.0+
 
 ### In `Package.swift`
 ```swift
 dependencies: [
-    .package(url: "https://github.com/peterfriese/jev-foundation-models.git", from: "0.1.0")
+    .package(url: "https://github.com/peterfriese/jev-foundation-models.git", from: "0.2.0")
 ]
 ```
 
-### In Xcode
-Go to **File > Add Package Dependencies...** and enter the repository URL.
+Add the target corresponding to your chosen path:
+```swift
+.target(
+    name: "MyApp",
+    dependencies: [
+        .product(name: "LayaOnDevice", package: "jev-foundation-models") // Path A
+        // or .product(name: "LayaFoundationModels", package: "jev-foundation-models") // Path B
+        // or .product(name: "JevFoundationModels", package: "jev-foundation-models") // Path C
+        // or .product(name: "SystemOneFoundationModels", package: "jev-foundation-models") // All
+    ]
+)
+```
+
+### In Xcode GUI
+1. Open your project in Xcode.
+2. Select **File > Add Package Dependencies...**
+3. Enter `https://github.com/peterfriese/jev-foundation-models.git`.
+4. Choose version `0.2.0` or later and select your desired library target.
 
 ---
 
-## 3. Define Your Decision Schema
+## 📝 Define Your Decision Schema
 
-Use standard Foundation Models `@Generable` and `@Guide` annotations:
+All backends use Apple's standard Foundation Models `@Generable` and `@Guide` macros. Define your output struct as a pure Swift type:
 
 ```swift
 import FoundationModels
 
 @Generable
-struct TicketTriage {
-    @Guide(description: "Is this ticket urgent or time-sensitive?")
+struct TicketTriage: Sendable {
+    @Guide(description: "Is this ticket urgent, mission-critical, or blocking?")
     var isUrgent: Bool
 
-    @Guide(description: "Which department should handle this request?")
+    @Guide(description: "Which specialized team should handle this request?")
     var department: Department
 
-    @Guide(description: "Customer frustration level", .range(0...2))
+    @Guide(description: "Customer frustration level from 0 (calm) to 2 (hostile)", .range(0...2))
     var frustration: Int
 }
 
 @Generable
-enum Department {
+enum Department: String, Sendable {
     case billing
     case technical
     case sales
@@ -59,39 +126,105 @@ enum Department {
 
 ---
 
-## 4. Evaluate with LanguageModelSession
+## 🚀 Running Your First Query
+
+### Option 1: On-Device Core ML (`LayaOnDevice`)
+
+Run inference 100% on-device on the Apple Neural Engine with zero API keys and zero network connectivity:
+
+```swift
+import FoundationModels
+import LayaOnDevice
+
+// 1. Locate compiled .mlmodelc bundle in your app bundle
+guard let modelURL = Bundle.main.url(forResource: "LayaModel", withExtension: "mlmodelc") else {
+    fatalError("Missing compiled Core ML bundle in application resources")
+}
+
+// 2. Initialize native tokenizer and Core ML engine
+let engine = try LayaCoreMLEngine(
+    modelURL: modelURL,
+    tokenizer: ModernBERTTokenizer.defaultTokenizer()
+)
+
+// 3. Wrap in Apple-native LanguageModel conforming instance
+let model = LayaOnDeviceLanguageModel(engine: engine)
+
+// 4. Create standard Foundation Models session
+let session = LanguageModelSession(model: model)
+
+// 5. Evaluate the decision
+let ticket = "I was charged twice for my subscription this morning and our CI/CD pipelines are blocked!"
+let response = try await session.respond(to: ticket, generating: TicketTriage.self)
+
+// 6. Inspect typed result
+let triage = response.content
+print("Urgent: \(triage.isUrgent)")               // true
+print("Department: \(triage.department)")         // .billing
+print("Frustration Score: \(triage.frustration)")   // 2
+```
+
+> **Note**: For deterministic offline unit tests without loading physical weights, `LayaCoreMLEngine` supports an offline mock initializer, or you can use `MockSystemOneBackend`.
+
+---
+
+### Option 2: Cloud-Hosted Jev (`JevFoundationModels`)
+
+Connect to TypeSafe AI's hosted cloud service:
 
 ```swift
 import FoundationModels
 import JevFoundationModels
 
-// 1. Initialize the Jev model
-let jev = JevLanguageModel(apiKey: ProcessInfo.processInfo.environment["TYPESAFE_API_KEY"]!)
+// 1. Read API key securely from environment or Keychain
+guard let apiKey = ProcessInfo.processInfo.environment["TYPESAFE_API_KEY"] else {
+    fatalError("Missing TYPESAFE_API_KEY environment variable")
+}
 
-// 2. Create standard Apple FoundationModels session
-let session = LanguageModelSession(model: jev)
+// 2. Initialize the Jev model with optional retry policy
+let model = JevLanguageModel(apiKey: apiKey, retryPolicy: .default)
 
-// 3. Prompt the session
-let ticket = "I was charged twice for my subscription this morning and need this fixed immediately!"
+// 3. Create standard Apple FoundationModels session
+let session = LanguageModelSession(model: model)
+
+// 4. Evaluate the decision
+let ticket = "I was charged twice for my subscription this morning and our CI/CD pipelines are blocked!"
 let response = try await session.respond(to: ticket, generating: TicketTriage.self)
 
-// 4. Consume typed decision
+// 5. Inspect typed result
 let triage = response.content
-print("Urgent: \(triage.isUrgent)")             // true
-print("Department: \(triage.department)")       // .billing
-print("Frustration Score: \(triage.frustration)") // 2
+print("Urgent: \(triage.isUrgent)")               // true
+print("Department: \(triage.department)")         // .billing
+print("Frustration Score: \(triage.frustration)")   // 2
+```
 
-// 5. Inspect calibrated probabilities and confidence
-if let confidence = response.metadata["confidence"] {
-    print("Confidence: \(confidence)")
-}
+> [!WARNING]
+> **Mobile Security Directive**: Never hardcode `TYPESAFE_API_KEY` into iOS, iPadOS, or visionOS client bundles. For client apps, prefer on-device Core ML (`LayaOnDevice`) or route requests through a secure server proxy using Apple App Attest or Firebase App Check (see [Mobile Security Guide](mobile-security.md)).
+
+---
+
+### Option 3: Local HTTP Server (`LayaFoundationModels`)
+
+Connect to a local or internal `laya-serve` instance:
+
+```swift
+import FoundationModels
+import LayaFoundationModels
+
+// Connects to http://127.0.0.1:8000/v1/systemone by default
+let model = LayaLanguageModel(endpoint: .localDefault)
+let session = LanguageModelSession(model: model)
+
+let ticket = "I was charged twice for my subscription this morning and our CI/CD pipelines are blocked!"
+let response = try await session.respond(to: ticket, generating: TicketTriage.self)
+let triage = response.content
 ```
 
 ---
 
-## 5. Configuring Resilience (`RetryPolicy`)
+## 🛡️ Configuring Resilience (`RetryPolicy`)
 
-For production workloads, configure network retries for transient gateway overload (HTTP 429 / 529):
+For network-backed transports (`JevFoundationModels` and `LayaFoundationModels`), configure exponential backoff and jitter to withstand transient gateway overload (HTTP 429 / 529):
 
 ```swift
 let retryPolicy = RetryPolicy(
@@ -106,11 +239,11 @@ let jev = JevLanguageModel(apiKey: apiKey, retryPolicy: retryPolicy)
 let session = LanguageModelSession(model: jev)
 ```
 
-If the API returns HTTP 429 with `Retry-After: 5`, `URLSessionTransport` automatically sleeps for the requested delay and retries, without dropping the request or failing your application flow.
+If the API responds with `HTTP 429` and a `Retry-After: 5` header, the transport honors the server directive, sleeps, and retries automatically.
 
 ---
 
-## 6. Routing Decisions on Calibrated Confidence
+## 🎯 Routing Decisions on Calibrated Confidence
 
 In System One models, the answer tells you *what* the model judged, but the calibrated confidence tells you **whether to act on it automatically**:
 
@@ -145,6 +278,14 @@ if let score = response.scoreValue(for: "frustration") {
 }
 ```
 
-For more in-depth guidance, see:
-* [Confidence & Noul Routing Guide](confidence-routing.md)
-* [HTTP Resilience & Retries Guide](resilience-and-retries.md)
+---
+
+## 📚 Where to Go Next
+
+- 📱 **Flagship Reference App**: Explore [`Examples/MailTriageApp`](../Examples/MailTriageApp/README.md), a complete macOS and iOS application demonstrating 5 switchable backends and FactoryKit DI.
+- 💻 **All Runnable Demos**: Check out [`Examples/README.md`](../Examples/README.md) for CLI tools (`LayaDemo`, `TicketTriageDemo`, `FileOrganizerDemo`, `DuplicateArticleDemo`).
+- 🔒 **Mobile Security & App Attest**: Read the [Mobile Security Guide](mobile-security.md) for zero-trust proxying.
+- 🧠 **On-Device Core ML Guide**: Read the [Laya Mobile & On-Device Guide](laya-mobile-guide.md).
+- ⚙️ **CLI & Server Guide**: Read the [Laya CLI & Server Guide](laya-cli-guide.md).
+- 📈 **Confidence & Routing**: Read the [Confidence & Noul Routing Guide](confidence-routing.md).
+- 🔄 **Resilience & Retries**: Read the [HTTP Resilience & Retries Guide](resilience-and-retries.md).

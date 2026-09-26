@@ -9,17 +9,17 @@ let package = Package(
         .executable(name: "BenchmarkCLI", targets: ["BenchmarkCLI"]),
     ],
     dependencies: [
-        .package(path: "../../../../../.."),
+        .package(name: "SystemOneFoundationModels", path: "../../../../../.."),
         .package(url: "https://github.com/hmlongco/Factory", from: "3.3.2")
     ],
     targets: [
         .target(
             name: "AppCore",
             dependencies: [
-                .product(name: "SystemOneCore", package: "system-one-laya"),
-                .product(name: "LayaFoundationModels", package: "system-one-laya"),
-                .product(name: "JevFoundationModels", package: "system-one-laya"),
-                .product(name: "LayaOnDevice", package: "system-one-laya"),
+                .product(name: "SystemOneCore", package: "SystemOneFoundationModels"),
+                .product(name: "LayaFoundationModels", package: "SystemOneFoundationModels"),
+                .product(name: "JevFoundationModels", package: "SystemOneFoundationModels"),
+                .product(name: "LayaOnDevice", package: "SystemOneFoundationModels"),
                 .product(name: "FactoryKit", package: "Factory")
             ],
             resources: [

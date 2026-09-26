@@ -3,7 +3,7 @@ import Foundation
 /// A native Swift tokenizer for mmBERT multilingual backbones (`laya-multilingual` 322M).
 ///
 /// Supports 100+ languages using a 256k token vocabulary based on SentencePiece unigram/BPE.
-/// See `tech-notes/0007-on-device-coreml-decision-engine.md`.
+/// See `tech-notes/0008-on-device-coreml-decision-engine.md`.
 public struct MMBERTTokenizer: LayaTokenizer, Sendable {
     public let clsTokenId: Int
     public let sepTokenId: Int

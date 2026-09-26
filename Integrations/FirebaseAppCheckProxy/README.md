@@ -58,7 +58,7 @@ If you wish to enforce **single-use tokens** to prevent token replay attacks:
 ### 2. Add Swift Transport to your App
 Copy `FirebaseAppCheckTransport.swift` into your Xcode project (iOS 27+, macOS 27+, visionOS 27+).
 
-> **Why a drop-in file?** `FirebaseAppCheckTransport.swift` is intentionally kept as an unbundled reference implementation rather than an SPM library target to preserve `JevFoundationModels`'s zero-dependency mandate and avoid pulling hundreds of megabytes of Firebase dependencies into projects that don't use it. See [Tech Note 0004](../../tech-notes/0004-spm-dependency-isolation-and-vendor-transports.md).
+> **Why a drop-in file?** `FirebaseAppCheckTransport.swift` is intentionally kept as an unbundled reference implementation rather than an SPM library target to preserve `JevFoundationModels`'s zero-dependency mandate and avoid pulling hundreds of megabytes of Firebase dependencies into projects that don't use it. See [Tech Note 0005](../../tech-notes/0005-spm-dependency-isolation-and-vendor-transports.md).
 
 Initialize `JevLanguageModel` with your deployed Cloud Function endpoint:
 

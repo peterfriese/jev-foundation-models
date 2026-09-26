@@ -15,7 +15,7 @@ public struct FormattedQuestionSequence: Sendable, Equatable {
 
 /// Builds sequence tokens and marker positions matching Laya's non-autoregressive decision model format.
 ///
-/// See `tech-notes/0007-on-device-coreml-decision-engine.md`.
+/// See `tech-notes/0008-on-device-coreml-decision-engine.md`.
 public struct LayaSequenceBuilder: Sendable {
     public let tokenizer: any LayaTokenizer
     public let maxLen: Int

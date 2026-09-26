@@ -54,6 +54,18 @@ dependencies: [
 ]
 ```
 
+### Which Target Should I Import?
+
+The package is split into focused, modular targets so you only link the code and dependencies your project needs:
+
+| Target / Library | Primary Capability | Network Required | API Key Required | Dependencies |
+| :--- | :--- | :---: | :---: | :--- |
+| `LayaOnDevice` | 100% offline inference via Core ML on Apple Neural Engine & GPU | ❌ No | ❌ No | `SystemOneCore` |
+| `LayaFoundationModels` | Connect to local (`localhost:8000`) or self-hosted `laya-serve` instances | ✅ Yes (Local/LAN) | ❌ No (Optional token) | `SystemOneCore` |
+| `JevFoundationModels` | Connect to TypeSafe AI cloud API with exponential retries | ✅ Yes (Cloud HTTPS) | ✅ Yes (`TYPESAFE_API_KEY`) | `SystemOneCore` |
+| `SystemOneCore` | Core abstractions, `@Generable` schema translation, `RoutingPolicy`, offline mocks | ❌ No | ❌ No | None |
+| `SystemOneFoundationModels` | Umbrella module bundling Core ML, Laya HTTP, and Jev Cloud backends | Varies by backend | Varies by backend | All above |
+
 ### 2. Choose Your Execution Backend
 
 #### Option A: On-Device Core ML (Zero Network, Air-Gapped Privacy)
@@ -146,6 +158,22 @@ if judgement.decision == .auto && judgement.answer == true {
 
 ---
 
+## 📱 Flagship Reference App: MailTriageApp
+
+Explore [`Examples/MailTriageApp`](Examples/MailTriageApp/README.md), a complete native macOS and iOS reference application showcasing production-grade System One decision models in a modern Apple Mail interface:
+
+- **Intelligent Email Triage**: Automatically categorizes incoming messages, assigns color-coded urgency priority tokens (`P0 Critical`, `P1 High`, `P2 Normal`, `P3 Low`), extracts suggested follow-up actions (Reply, Forward, Compose), and drives batch triage flows.
+- **5 Selectable Backends**: Hot-swap backends on the fly in Settings:
+  1. **Laya Core ML**: 100% offline inference on the Apple Neural Engine and GPU.
+  2. **Laya Local**: Local `laya-serve` instance running on `http://127.0.0.1:8000`.
+  3. **Laya Remote**: Hosted Laya instance on `https://api.impossibl.com`.
+  4. **Jev Cloud**: TypeSafe AI hosted service on `https://api.typesafe.ai`.
+  5. **Offline Mock**: Instant deterministic evaluation for testing and previews.
+- **Pure Native Architecture**: Built with Swift 6 Complete Strict Concurrency, SwiftUI `@Observable`, FactoryKit dependency injection, Liquid Glass design, and multi-window split views.
+- **Catalog of Demos**: Browse [`Examples/README.md`](Examples/README.md) for the full list of runnable CLI tools and sample projects.
+
+---
+
 ## 🏗️ Architecture
 
 `SystemOneFoundationModels` conforms directly to Apple's public provider protocols (`LanguageModel`, `LanguageModelExecutor`):
@@ -177,6 +205,9 @@ if judgement.decision == .auto && judgement.answer == true {
 ```
 
 For more in-depth documentation, see:
+* [Getting Started Guide](docs/getting-started.md)
+* [Reference Demos & Examples Directory](Examples/README.md)
+* [Flagship Reference App (MailTriageApp)](Examples/MailTriageApp/README.md)
 * [Architecture Decision Record (ADR)](docs/architecture/ADR-2026-09-25-mail-triage-system-one-engine.md)
 * [Product Requirements Document (PRD)](docs/prd/PRD-2026-09-25-mail-triage-system-one-engine.md)
 * [CLI & Server Deployment Guide](docs/laya-cli-guide.md)
@@ -186,6 +217,7 @@ For more in-depth documentation, see:
 * [Mobile Security Guide (App Check)](docs/mobile-security.md)
 * [Type Mapping Guide](docs/mapping-guide.md)
 * [Tech Notes Index](tech-notes/README.md)
+* [Contributing Guide](CONTRIBUTING.md)
 
 ---
 

@@ -7,7 +7,7 @@ import JevFoundationModels
 /// A transport that delivers Jev requests to a secure Firebase Cloud Function proxy
 /// authenticated with Apple App Attest via Firebase App Check.
 ///
-/// See `docs/mobile-security.md` and `tech-notes/0003-secure-mobile-transport-appcheck.md`
+/// See `docs/mobile-security.md` and `tech-notes/0004-secure-mobile-transport-appcheck.md`
 /// for complete setup instructions.
 public struct FirebaseAppCheckTransport: JevTransport, Sendable {
     /// The token acquisition strategy for Firebase App Check.

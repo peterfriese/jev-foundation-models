@@ -1,6 +1,6 @@
 # Workspace Agent Directives & Principles
 
-Welcome to the **Jev Foundation Models & ACMD Mobile Engineering** workspace. This repository provides a native bridge between **Apple's Foundation Models framework** (`LanguageModel`, `LanguageModelExecutor`, `@Generable`) and **TypeSafe AI's Jev** System One decision models, alongside reference native mobile applications (`Examples/MailTriageApp/`).
+Welcome to the **System One for Apple Foundation Models (Jev & Laya) & ACMD Mobile Engineering** workspace. This repository provides a native bridge between **Apple's Foundation Models framework** (`LanguageModel`, `LanguageModelExecutor`, `@Generable`) and **System One decision models** (TypeSafe AI's Jev and Laya on-device / self-hosted models), alongside reference native mobile applications (`Examples/MailTriageApp/`).
 
 ---
 

@@ -16,7 +16,7 @@ private final class ThreadSafeMLModel: @unchecked Sendable {
 
 /// An on-device inference engine executing Laya decision models locally via Core ML on Apple Neural Engine / GPU.
 ///
-/// See `tech-notes/0007-on-device-coreml-decision-engine.md`.
+/// See `tech-notes/0008-on-device-coreml-decision-engine.md`.
 public final class LayaCoreMLEngine: Sendable {
     public let modelURL: URL?
     public let tokenizer: any LayaTokenizer

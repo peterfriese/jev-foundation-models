@@ -15,6 +15,9 @@ metadata:
 
 # Jev Foundation Models Bridge
 
+> [!TIP]
+> **Modern Multi-Backend Standard**: For projects requiring on-device inference via Core ML (`LayaOnDevice`) or local self-hosted evaluation (`LayaFoundationModels`) alongside TypeSafe Jev cloud, refer to the unified `system-one-foundation-models` skill and package target. This skill remains focused on TypeSafe Jev cloud evaluation, resilience policies, and App Check security proxy architectures.
+
 This skill guides the design, implementation, and testing of applications integrating **TypeSafe AI's Jev System One decision model** via **Apple's Foundation Models framework** (`FoundationModels`) in Swift 6.
 
 ---
